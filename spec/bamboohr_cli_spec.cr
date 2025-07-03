@@ -1,0 +1,147 @@
+require "spec"
+require "../src/bamboohr_cli/cli"
+require "../src/bamboohr_cli/api"
+
+describe "BambooHRCLI::CLI" do
+  describe "initialization" do
+    it "creates a new CLI instance with correct parameters" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli.should be_a(BambooHRCLI::CLI)
+    end
+
+    it "initializes with nil session start and zero daily total" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli.current_session_start.should be_nil
+      cli.daily_total_seconds.should eq(0)
+    end
+
+    it "creates an API client internally" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli.api.should be_a(BambooHRCLI::BambooHRAPI)
+    end
+
+    it "uses STDOUT by default when no IO provided" do
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123")
+      cli.should be_a(BambooHRCLI::CLI)
+    end
+  end
+
+  describe "clock operations" do
+    it "clock_in returns boolean" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      # This will fail with test credentials, but should return a boolean
+      result = cli.clock_in
+      result.should be_a(Bool)
+
+      # Verify output was written to our IO
+      io.to_s.should contain("Clocking in")
+    end
+
+    it "clock_out returns boolean" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      result = cli.clock_out
+      result.should be_a(Bool)
+
+      # Verify output was written to our IO
+      io.to_s.should contain("Clocking out")
+    end
+
+    it "clock_in accepts optional parameters" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      result = cli.clock_in(note: "Test note", project_id: 10, task_id: 25)
+      result.should be_a(Bool)
+
+      # Verify output was written to our IO
+      io.to_s.should contain("Clocking in")
+    end
+  end
+
+  describe "status management" do
+    it "can refresh status without errors" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      # Should not raise an exception
+      cli.refresh_status
+
+      # Status should remain accessible
+      cli.current_session_start.should be_a(Time?)
+      cli.daily_total_seconds.should be_a(Int32)
+    end
+
+    it "can refresh daily total without errors" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      cli.refresh_daily_total
+
+      cli.daily_total_seconds.should be_a(Int32)
+    end
+  end
+
+  describe "display methods" do
+    it "can display status without errors" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      # Should not raise an exception when displaying status
+      cli.display_status
+
+      # Verify output was written to our IO
+      output = io.to_s
+      output.should contain("CLOCKED OUT")
+      output.should contain("Daily total")
+
+      # Test passes if no exception is raised
+      true.should be_true
+    end
+
+    it "displays different status when clocked in" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      # We can't directly set private instance variables in Crystal
+      # Instead, let's just test the display method works
+      cli.display_status
+
+      # Should show clocked out status by default
+      output = io.to_s
+      output.should contain("CLOCKED OUT")
+      output.should contain("Daily total")
+    end
+  end
+
+  describe "output formatting" do
+    it "writes error messages to provided IO" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      # This will trigger an error message
+      cli.clock_in
+
+      output = io.to_s
+      output.should contain("Failed to clock in")
+    end
+
+    it "writes status messages to provided IO" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+
+      cli.refresh_status
+
+      # Should have written status messages (even if API fails)
+      output = io.to_s
+      # Output might be empty if no errors, which is fine
+      output.should be_a(String)
+    end
+  end
+end

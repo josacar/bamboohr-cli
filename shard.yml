@@ -1,0 +1,37 @@
+name: bamboohr-cli
+version: 1.0.0
+
+description: |
+  A modern, interactive command-line interface for BambooHR time tracking.
+  Features real-time session updates, XDG-compliant configuration, secure credential management with masked input,
+  and professional terminal prompting powered by crystal-term/prompt.
+
+authors:
+  - Jose Luis <joseluis@example.com>
+
+crystal: ">= 1.0.0"
+
+license: MIT
+
+targets:
+  bamboohr-cli:
+    main: src/main.cr
+
+dependencies:
+  term-prompt:
+    github: crystal-term/prompt
+    version: ~> 0.2.0
+
+development_dependencies:
+  # Using built-in spec framework - no additional dependencies needed
+
+repository: https://github.com/josacar/bamboohr-cli
+homepage: https://github.com/josacar/bamboohr-cli
+
+keywords:
+  - bamboohr
+  - time-tracking
+  - cli
+  - productivity
+  - xdg
+  - yaml

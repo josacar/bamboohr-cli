@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        crystal: [1.9.2, latest]
+        exclude:
+          # Exclude problematic combinations if needed
+          - os: macos-latest
+            crystal: 1.9.2
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libreadline-dev \
+          libyaml-dev \
+          libssl-dev \
+          libxml2-dev \
+          libgmp-dev \
+          libz-dev \
+          libevent-dev \
+          libpcre2-dev \
+          build-essential
+    
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        # macOS usually has these via Xcode Command Line Tools
+        # but let's ensure we have the essentials
+        brew install libyaml openssl readline
+    
+    - name: Install Crystal
+      uses: crystal-lang/install-crystal@v1
+      with:
+        crystal: ${{ matrix.crystal }}
+    
+    - name: Cache shards
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/shards
+        key: ${{ runner.os }}-crystal-${{ matrix.crystal }}-shards-${{ hashFiles('shard.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-crystal-${{ matrix.crystal }}-shards-
+          ${{ runner.os }}-crystal-shards-
+    
+    - name: Install dependencies
+      run: shards install
+    
+    - name: Run tests
+      run: crystal spec --verbose
+    
+    - name: Build application
+      run: shards build --production
+    
+    - name: Check formatting
+      run: crystal tool format --check
+      continue-on-error: true
+    
+    - name: Run basic functionality test
+      run: |
+        ./bin/bamboohr-cli --version
+        ./bin/bamboohr-cli --help
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libreadline-dev \
+          libyaml-dev \
+          libssl-dev \
+          libxml2-dev \
+          libgmp-dev \
+          libz-dev \
+          libevent-dev \
+          libpcre2-dev \
+          build-essential
+    
+    - name: Install Crystal
+      uses: crystal-lang/install-crystal@v1
+      with:
+        crystal: latest
+    
+    - name: Install dependencies
+      run: shards install
+    
+    - name: Check code formatting
+      run: crystal tool format --check
+    
+    - name: Run ameba linter
+      run: |
+        # Install ameba if available
+        if shards list | grep -q ameba; then
+          ./bin/ameba
+        else
+          echo "Ameba not configured, skipping lint check"
+        fi
+      continue-on-error: true
+
+  # Test on different architectures if needed
+  test-compatibility:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libreadline-dev \
+          libyaml-dev \
+          libssl-dev \
+          libxml2-dev \
+          libgmp-dev \
+          libz-dev \
+          libevent-dev \
+          libpcre2-dev \
+          build-essential
+    
+    - name: Install Crystal
+      uses: crystal-lang/install-crystal@v1
+      with:
+        crystal: latest
+    
+    - name: Test compilation without external dependencies
+      run: |
+        # Verify the application can be built in a minimal environment
+        shards build --production --static
+      continue-on-error: true
+    
+    - name: Test configuration handling
+      run: |
+        # Test that config system works without actual API calls
+        echo "Testing configuration system..."
+        ./bin/bamboohr-cli --config || true
+        ./bin/bamboohr-cli --help
+        ./bin/bamboohr-cli --version
