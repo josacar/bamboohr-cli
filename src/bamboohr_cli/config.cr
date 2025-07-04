@@ -29,7 +29,6 @@ module BambooHRCLI
     abstract def info(path : Path | String, follow_symlinks = true) : File::Info
   end
 
-
   # XDG-compliant configuration manager
   class ConfigManager
     class LocalFileSystem
