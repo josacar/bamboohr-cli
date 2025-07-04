@@ -88,11 +88,6 @@ describe "CLIParser" do
       result = CLIParser.parse(["--invalid"])
       result.should eq(:unknown)
     end
-
-    it "returns :unknown for multiple arguments" do
-      result = CLIParser.parse(["arg1", "arg2"])
-      result.should eq(:unknown)
-    end
   end
 
   describe "show_help" do

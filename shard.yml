@@ -15,7 +15,7 @@ license: MIT
 
 targets:
   bamboohr-cli:
-    main: src/main.cr
+    main: src/bamboohr_cli.cr
 
 dependencies:
   term-prompt:

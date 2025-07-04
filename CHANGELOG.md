@@ -21,7 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - API client (`bamboohr_api.cr`)
   - CLI interface (`bamboohr_cli.cr`) 
   - Configuration management (`config_manager.cr`)
-  - Main entry point (`main.cr`)
 - Comprehensive test suite with 64 test cases
 - Error handling for network issues and API failures
 - Background fiber-based real-time updates

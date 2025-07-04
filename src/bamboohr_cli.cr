@@ -3,6 +3,7 @@ require "./bamboohr_cli/config"
 require "./bamboohr_cli/api"
 require "./bamboohr_cli/cli"
 require "colorize"
+require "option_parser"
 
 # Legacy Config struct for backward compatibility
 struct Config
@@ -25,26 +26,31 @@ end
 # CLI argument parsing
 class CLIParser
   def self.parse(args : Array(String))
-    case args.size
-    when 0
-      # Interactive mode
-      :interactive
-    when 1
-      case args[0]
-      when "--help", "-h"
-        :help
-      when "--version", "-v"
-        :version
-      when "--config"
-        :config_info
-      when "--config-remove"
-        :config_remove
-      else
-        :unknown
+    action = :interactive
+
+    parser = OptionParser.new do |parser|
+      parser.banner = "Usage: bamboohr-cli [subcommand]"
+      parser.on("--config", "Shows config") do
+        action = :config_info
       end
-    else
-      :unknown
+      parser.on("--config-remove", "Removes config file") do
+        action = :config_remove
+      end
+      parser.on("-v", "--version", "Show version") do
+        action = :version
+      end
+      parser.on("-h", "--help", "Show this help") do
+        action = :help
+      end
+      parser.invalid_option do |flag|
+        STDERR.puts "ERROR: #{flag} is not a valid option."
+        action = :unknown
+      end
     end
+
+    parser.parse(args)
+
+    action
   end
 
   def self.show_help(io : IO = STDOUT)

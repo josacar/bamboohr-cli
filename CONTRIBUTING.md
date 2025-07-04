@@ -96,26 +96,6 @@ crystal tool format --check
 
 ## 🏗️ Architecture
 
-### Project Structure
-
-```
-bamboohr-cli/
-├── src/
-│   ├── main.cr              # Entry point and CLI parsing
-│   ├── bamboohr_api.cr      # API client and data models
-│   ├── bamboohr_cli.cr      # CLI interface and user interaction
-│   └── config_manager.cr    # XDG-compliant configuration
-├── spec/
-│   ├── bamboohr_api_spec.cr
-│   ├── bamboohr_cli_spec.cr
-│   ├── config_manager_spec.cr
-│   └── main_spec.cr
-├── bin/                     # Compiled binaries
-├── shard.yml               # Project metadata
-├── Makefile                # Build automation
-└── README.md
-```
-
 ### Design Principles
 
 - **Separation of concerns**: Each module has a single responsibility
