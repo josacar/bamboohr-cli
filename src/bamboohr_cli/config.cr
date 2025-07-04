@@ -264,7 +264,7 @@ module BambooHRCLI
 
       if LocalFileSystem.exists?(config_file_path)
         stat = LocalFileSystem.info(config_file_path)
-        io.puts "LocalFileSystem size: #{stat.size} bytes"
+        io.puts "File size: #{stat.size} bytes"
         io.puts "Last modified: #{stat.modification_time}"
         io.puts "Permissions: #{stat.permissions.value.to_s(8)}"
       end
