@@ -161,14 +161,7 @@ describe "ConfigManager" do
   describe "configuration file operations" do
     it "handles non-existent config file gracefully when no config exists" do
       io = IO::Memory.new
-
-      # Temporarily move any existing config file
-      config_path = BambooHRCLI::ConfigManager.config_file_path
-      backup_path = "#{config_path}.backup"
-
-      if File.exists?(config_path)
-        File.rename(config_path, backup_path)
-      end
+      ENV["XDG_CONFIG_HOME"] = generate_test_home
 
       begin
         # Try to load non-existent config
@@ -176,15 +169,13 @@ describe "ConfigManager" do
         # Should return nil without crashing
         config.should be_nil
       ensure
-        # Restore config file if it existed
-        if File.exists?(backup_path)
-          File.rename(backup_path, config_path)
-        end
+        ENV.delete("XDG_CONFIG_HOME")
       end
     end
 
     it "handles config removal gracefully" do
       io = IO::Memory.new
+      ENV["XDG_CONFIG_HOME"] = generate_test_home
 
       # Try to remove config (may or may not exist)
       result = BambooHRCLI::ConfigManager.remove_config(io)
@@ -193,6 +184,8 @@ describe "ConfigManager" do
       output = io.to_s
       # Should contain either success or "no file" message
       (output.includes?("Configuration file removed") || output.includes?("No configuration file to remove")).should be_true
+
+      ENV.delete("XDG_CONFIG_HOME")
     end
   end
 

@@ -15,14 +15,14 @@ describe "BambooHR API HTTP Behavior" do
       it "should send POST request with UTC time data" do
         # Given: API client and mocked successful response
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         expected_response = {
-          "id" => 12345,
+          "id"         => 12345,
           "employeeId" => 123,
-          "type" => "clock",
-          "date" => Time.utc.to_s("%Y-%m-%d"),
-          "start" => Time.utc.to_s("%H:%M"),
-          "timezone" => "UTC"
+          "type"       => "clock",
+          "date"       => Time.utc.to_s("%Y-%m-%d"),
+          "start"      => Time.utc.to_s("%H:%M"),
+          "timezone"   => "UTC",
         }.to_json
 
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
@@ -39,9 +39,9 @@ describe "BambooHR API HTTP Behavior" do
       it "should send proper authentication headers" do
         # Given: API client
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
-          .to_return(status: 200, body: {"id" => 1, "employeeId" => 123}.to_json, headers: { "Authorization" => "Basic" })
+          .to_return(status: 200, body: {"id" => 1, "employeeId" => 123}.to_json, headers: {"Authorization" => "Basic"})
 
         # if auth_header = captured_headers["Authorization"]?
         #   auth_header.should start_with("Basic ")
@@ -58,14 +58,12 @@ describe "BambooHR API HTTP Behavior" do
 
         # Then: Should send proper headers
         success.should be_true
-        
-        
       end
 
       it "should include optional parameters in request body" do
         # Given: API client
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
           .to_return(status: 200, body: {"id" => 1}.to_json)
 
@@ -74,7 +72,7 @@ describe "BambooHR API HTTP Behavior" do
 
         # Then: Should include optional parameters
         success.should be_true
-        
+
         # if !captured_body.empty?
         #   parsed_request = JSON.parse(captured_body)
         #   parsed_request["note"].should eq("Working on feature X")
@@ -88,12 +86,12 @@ describe "BambooHR API HTTP Behavior" do
       it "should handle 401 Unauthorized properly" do
         # Given: API client and mocked 401 response
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         error_response = {
           "error" => {
-            "code" => 401,
-            "message" => "Invalid API key"
-          }
+            "code"    => 401,
+            "message" => "Invalid API key",
+          },
         }.to_json
 
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
@@ -112,7 +110,7 @@ describe "BambooHR API HTTP Behavior" do
       it "should handle 409 Conflict (already clocked in)" do
         # Given: API client and conflict response
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
           .to_return(status: 409, body: {"error" => "Already clocked in"}.to_json)
 
@@ -131,16 +129,16 @@ describe "BambooHR API HTTP Behavior" do
       it "should send POST request with UTC end time" do
         # Given: API client and mocked successful response
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         expected_response = {
-          "id" => 12345,
+          "id"         => 12345,
           "employeeId" => 123,
-          "type" => "clock",
-          "date" => Time.utc.to_s("%Y-%m-%d"),
-          "start" => "09:00",
-          "end" => Time.utc.to_s("%H:%M"),
-          "timezone" => "UTC",
-          "hours" => 8.5
+          "type"       => "clock",
+          "date"       => Time.utc.to_s("%Y-%m-%d"),
+          "start"      => "09:00",
+          "end"        => Time.utc.to_s("%H:%M"),
+          "timezone"   => "UTC",
+          "hours"      => 8.5,
         }.to_json
 
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_out")
@@ -153,7 +151,7 @@ describe "BambooHR API HTTP Behavior" do
         success.should be_true
         entry.should_not be_nil
         entry.not_nil!.hours.should eq(8.5)
-        
+
         # Verify request contains UTC end time
         # if !captured_body.empty?
         #   parsed_request = JSON.parse(captured_body)
@@ -169,25 +167,25 @@ describe "BambooHR API HTTP Behavior" do
       it "should send GET request with proper date parameters" do
         # Given: API client and mocked response
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         timesheet_response = [
           {
-            "id" => 1,
+            "id"         => 1,
             "employeeId" => 123,
-            "date" => "2024-07-04",
-            "start" => "09:00",
-            "end" => "17:00",
-            "hours" => 8.0,
-            "timezone" => "UTC"
+            "date"       => "2024-07-04",
+            "start"      => "09:00",
+            "end"        => "17:00",
+            "hours"      => 8.0,
+            "timezone"   => "UTC",
           },
           {
-            "id" => 2,
+            "id"         => 2,
             "employeeId" => 123,
-            "date" => "2024-07-04",
-            "start" => "09:00",
-            "hours" => 4.0,
-            "timezone" => "UTC"
-          }
+            "date"       => "2024-07-04",
+            "start"      => "09:00",
+            "hours"      => 4.0,
+            "timezone"   => "UTC",
+          },
         ].to_json
 
         WebMock.stub(:get, %r{https://test-company\.bamboohr\.com/api/v1/time_tracking/timesheet_entries.*})
@@ -209,15 +207,15 @@ describe "BambooHR API HTTP Behavior" do
       it "should detect active sessions from incomplete entries" do
         # Given: API client and response with active session
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         active_session_response = [
           {
-            "id" => 1,
+            "id"         => 1,
             "employeeId" => 123,
-            "date" => Time.utc.to_json,
-            "start" => "2025-07-03T13:39:00+00:00",
-            "timezone" => "UTC"
-          }
+            "date"       => Time.utc.to_json,
+            "start"      => "2025-07-03T13:39:00+00:00",
+            "timezone"   => "UTC",
+          },
         ].to_json
 
         WebMock.stub(:get, %r{https://test-company\.bamboohr\.com/api/v1/time_tracking/timesheet_entries.*})
@@ -234,7 +232,7 @@ describe "BambooHR API HTTP Behavior" do
       it "should handle empty timesheet response" do
         # Given: API client and empty response
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-        
+
         WebMock.stub(:get, %r{https://test-company\.bamboohr\.com/api/v1/time_tracking/timesheet_entries.*})
           .to_return(status: 200, body: "[]")
 
@@ -252,12 +250,11 @@ describe "BambooHR API HTTP Behavior" do
 
   describe "HTTP Error Handling" do
     it "should handle various HTTP status codes appropriately" do
-      
       error_scenarios = [
         {status: 400, expected_success: false},
         {status: 403, expected_success: false},
         {status: 404, expected_success: false},
-        {status: 500, expected_success: false}
+        {status: 500, expected_success: false},
       ]
 
       error_scenarios.each do |scenario|
@@ -281,7 +278,7 @@ describe "BambooHR API HTTP Behavior" do
     it "should handle malformed JSON responses gracefully" do
       # Given: API client and malformed JSON response
       api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
-      
+
       WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
         .to_return(status: 200, body: "invalid json {")
 
@@ -290,7 +287,7 @@ describe "BambooHR API HTTP Behavior" do
 
       # Then: Should handle gracefully (200 status = success, but no entry parsed)
       success.should be_true
-      entry.should be_nil  # Couldn't parse entry from malformed JSON
+      entry.should be_nil # Couldn't parse entry from malformed JSON
     end
   end
 end

@@ -20,8 +20,46 @@ module BambooHRCLI
     end
   end
 
+  module FileSystemInterface
+    abstract def write(path : String | Path, content : String) : Nil
+    abstract def read(path : String | Path) : String
+    abstract def delete(path : String | Path) : Nil
+    abstract def exists?(path : String | Path) : Bool
+    abstract def chmod(path : String | Path, mode : Int | File::Permissions) : Nil
+    abstract def info(path : Path | String, follow_symlinks = true) : File::Info
+  end
+
+
   # XDG-compliant configuration manager
   class ConfigManager
+    class LocalFileSystem
+      extend FileSystemInterface
+
+      def self.write(path : String | Path, content : String) : Nil
+        File.write(path, content)
+      end
+
+      def self.read(path : String | Path) : String
+        File.read(path)
+      end
+
+      def self.delete(path : String | Path) : Nil
+        File.delete(path)
+      end
+
+      def self.exists?(path : String | Path) : Bool
+        File.exists?(path)
+      end
+
+      def self.chmod(path : String | Path, mode : Int | File::Permissions) : Nil
+        File.chmod(path, mode)
+      end
+
+      def self.info(path : Path | String, follow_symlinks = true) : File::Info
+        File.info(path, follow_symlinks)
+      end
+    end
+
     APP_NAME    = "bamboohr-cli"
     CONFIG_FILE = "config.yml"
 
@@ -50,14 +88,14 @@ module BambooHRCLI
     # Load configuration from XDG-compliant locations
     def self.load_config(io : IO = STDOUT) : AppConfig?
       # Try user config first
-      if File.exists?(config_file_path)
+      if LocalFileSystem.exists?(config_file_path)
         io.puts "📁 Loading configuration from #{config_file_path}".colorize(:cyan)
         return load_config_file(config_file_path)
       end
 
       # Try system config locations
       system_config_paths.each do |path|
-        if File.exists?(path)
+        if LocalFileSystem.exists?(path)
           io.puts "📁 Loading system configuration from #{path}".colorize(:cyan)
           return load_config_file(path)
         end
@@ -70,7 +108,7 @@ module BambooHRCLI
     # Load and parse a specific config file
     private def self.load_config_file(path : String) : AppConfig?
       begin
-        yaml_content = File.read(path)
+        yaml_content = LocalFileSystem.read(path)
         AppConfig.from_yaml(yaml_content)
       rescue ex : YAML::ParseException
         STDERR.puts "❌ Error parsing config file #{path}: #{ex.message}".colorize(:red)
@@ -93,10 +131,10 @@ module BambooHRCLI
         yaml_content = generate_config_yaml(config)
 
         # Write to file
-        File.write(config_file_path, yaml_content)
+        LocalFileSystem.write(config_file_path, yaml_content)
 
         # Set appropriate permissions (readable by user only)
-        File.chmod(config_file_path, 0o600)
+        LocalFileSystem.chmod(config_file_path, 0o600)
 
         io.puts "💾 Configuration saved to #{config_file_path}".colorize(:green)
         true
@@ -223,11 +261,11 @@ module BambooHRCLI
       io.puts
       io.puts "Config file path: #{config_file_path}"
       io.puts "Config directory: #{config_dir}"
-      io.puts "File exists: #{File.exists?(config_file_path) ? "Yes".colorize(:green) : "No".colorize(:red)}"
+      io.puts "File exists: #{LocalFileSystem.exists?(config_file_path) ? "Yes".colorize(:green) : "No".colorize(:red)}"
 
-      if File.exists?(config_file_path)
-        stat = File.info(config_file_path)
-        io.puts "File size: #{stat.size} bytes"
+      if LocalFileSystem.exists?(config_file_path)
+        stat = LocalFileSystem.info(config_file_path)
+        io.puts "LocalFileSystem size: #{stat.size} bytes"
         io.puts "Last modified: #{stat.modification_time}"
         io.puts "Permissions: #{stat.permissions.value.to_s(8)}"
       end
@@ -235,16 +273,16 @@ module BambooHRCLI
       io.puts
       io.puts "System config paths:"
       system_config_paths.each do |path|
-        exists = File.exists?(path)
+        exists = LocalFileSystem.exists?(path)
         io.puts "  #{path} #{exists ? "(exists)".colorize(:green) : "(not found)".colorize(:light_gray)}"
       end
     end
 
     # Remove configuration file
     def self.remove_config(io : IO = STDOUT) : Bool
-      if File.exists?(config_file_path)
+      if LocalFileSystem.exists?(config_file_path)
         begin
-          File.delete(config_file_path)
+          LocalFileSystem.delete(config_file_path)
           io.puts "🗑️  Configuration file removed: #{config_file_path}".colorize(:green)
           true
         rescue ex
