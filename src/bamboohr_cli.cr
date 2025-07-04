@@ -43,7 +43,6 @@ class CLIParser
         action = :help
       end
       parser.invalid_option do |flag|
-        STDERR.puts "ERROR: #{flag} is not a valid option."
         action = :unknown
       end
     end

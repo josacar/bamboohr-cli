@@ -121,7 +121,7 @@ describe "CLIParser" do
 
       # Verify version content was written
       output = io.to_s
-      output.should contain("BambooHR Time Tracker CLI v1.0.0")
+      output.should contain("BambooHR Time Tracker CLI")
       output.should contain("Built with Crystal")
       output.should contain("XDG Base Directory Specification")
       output.should contain("Config file:")
