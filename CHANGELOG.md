@@ -38,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 - Built with Crystal programming language
-- Uses only Crystal standard library (no external dependencies)
 - Follows Crystal language conventions and style guide
 - Comprehensive error handling and validation
 - Memory efficient with proper resource cleanup

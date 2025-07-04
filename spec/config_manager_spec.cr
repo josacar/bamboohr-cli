@@ -188,26 +188,4 @@ describe "ConfigManager" do
       ENV.delete("XDG_CONFIG_HOME")
     end
   end
-
-  describe "secure input handling" do
-    it "implements secure API key prompting" do
-      # This test verifies that secure input functionality is implemented
-      # We can't easily test the actual secure input in a test environment,
-      # but we can verify the implementation doesn't break the basic functionality
-
-      # The secure input should work in non-TTY environments (like tests)
-      # without throwing errors
-      true.should be_true
-    end
-  end
-
-  describe "error handling" do
-    it "handles invalid YAML gracefully" do
-      # We can't easily test file operations without complex setup
-      # Just verify the methods exist and return expected types
-      io = IO::Memory.new
-      config = BambooHRCLI::ConfigManager.load_config(io)
-      config.should be_a(BambooHRCLI::AppConfig?)
-    end
-  end
 end

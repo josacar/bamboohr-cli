@@ -145,7 +145,7 @@ employee_id: "123"
 git clone https://github.com/josacar/bamboohr-cli.git
 cd bamboohr-cli
 
-# Install dependencies (none required - uses Crystal stdlib only)
+# Install dependencies
 shards install
 
 # Build the application
