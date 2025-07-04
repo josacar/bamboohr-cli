@@ -4,7 +4,7 @@ require "./api"
 
 module BambooHRCLI
   class CLI
-    @api : BambooHRAPI
+    @api : API
     @current_session_start : Time?
     @daily_total_seconds : Int32
     @io : IO
@@ -12,7 +12,7 @@ module BambooHRCLI
     @last_daily_refresh : Time
 
     def initialize(@company_domain : String, @api_key : String, @employee_id : String, @io : IO = STDOUT)
-      @api = BambooHRAPI.new(@company_domain, @api_key, @employee_id)
+      @api = API.new(@company_domain, @api_key, @employee_id)
       @current_session_start = nil
       @daily_total_seconds = 0
       @update_channel = nil

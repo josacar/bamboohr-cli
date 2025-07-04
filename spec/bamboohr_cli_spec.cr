@@ -20,7 +20,7 @@ describe "BambooHRCLI::CLI" do
     it "creates an API client internally" do
       io = IO::Memory.new
       cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
-      cli.api.should be_a(BambooHRCLI::BambooHRAPI)
+      cli.api.should be_a(BambooHRCLI::API)
     end
 
     it "uses STDOUT by default when no IO provided" do

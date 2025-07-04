@@ -49,7 +49,7 @@ module BambooHRCLI
   alias EmployeeTimesheetEntryCollection = Array(EmployeeTimesheetEntry)
 
   # BambooHR API Client
-  class BambooHRAPI
+  class API
     @auth_header : String
 
     def initialize(@company_domain : String, @api_key : String, @employee_id : String)
@@ -138,6 +138,7 @@ module BambooHRCLI
             clock_in_time = Time.parse_iso8601(latest_entry.start.not_nil!)
             return {true, clock_in_time}
           rescue
+            puts "Error: Exception when parsing time in entry"
             return {false, nil}
           end
         end

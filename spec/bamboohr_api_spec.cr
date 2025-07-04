@@ -183,17 +183,17 @@ describe "BambooHR API Models" do
   end
 end
 
-describe "BambooHRAPI" do
+describe "API" do
   describe "initialization" do
     it "creates a new API client with correct parameters" do
-      api = BambooHRCLI::BambooHRAPI.new("testcompany", "test_api_key", "123")
-      api.should be_a(BambooHRCLI::BambooHRAPI)
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
+      api.should be_a(BambooHRCLI::API)
     end
   end
 
   describe "API methods return proper tuples" do
     it "clock_in returns success boolean and optional entry" do
-      api = BambooHRCLI::BambooHRAPI.new("testcompany", "test_api_key", "123")
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
 
       # This will fail with test credentials, but we can verify the return type
       success, entry = api.clock_in
@@ -202,7 +202,7 @@ describe "BambooHRAPI" do
     end
 
     it "clock_out returns success boolean and optional entry" do
-      api = BambooHRCLI::BambooHRAPI.new("testcompany", "test_api_key", "123")
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
 
       success, entry = api.clock_out
       success.should be_a(Bool)
@@ -210,7 +210,7 @@ describe "BambooHRAPI" do
     end
 
     it "get_current_status returns success boolean and optional time" do
-      api = BambooHRCLI::BambooHRAPI.new("testcompany", "test_api_key", "123")
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
 
       success, time = api.get_current_status
       success.should be_a(Bool)
@@ -218,7 +218,7 @@ describe "BambooHRAPI" do
     end
 
     it "get_daily_total returns success boolean and integer seconds" do
-      api = BambooHRCLI::BambooHRAPI.new("testcompany", "test_api_key", "123")
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
 
       success, seconds = api.get_daily_total("2024-01-01")
       success.should be_a(Bool)
@@ -226,7 +226,7 @@ describe "BambooHRAPI" do
     end
 
     it "get_timesheet_entries returns success boolean and optional collection" do
-      api = BambooHRCLI::BambooHRAPI.new("testcompany", "test_api_key", "123")
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
 
       success, entries = api.get_timesheet_entries("2024-01-01", "2024-01-01")
       success.should be_a(Bool)
@@ -236,7 +236,7 @@ describe "BambooHRAPI" do
 
   describe "response tracking" do
     it "tracks last response status and body" do
-      api = BambooHRCLI::BambooHRAPI.new("testcompany", "test_api_key", "123")
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
 
       # Make a request (will fail with test credentials)
       api.clock_in
