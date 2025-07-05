@@ -17,7 +17,7 @@ build:
 # Build optimized release version
 release:
 	@echo "🚀 Building optimized release..."
-	shards build --release
+	shards build --production --release --no-debug
 	@echo "✅ Release build complete: ./bin/$(BINARY_NAME)"
 
 # Run the application directly from source
