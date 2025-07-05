@@ -23,6 +23,8 @@ dependencies:
     version: ~> 0.2.0
 
 development_dependencies:
+  timecop:
+    github: crystal-community/timecop.cr
   webmock:
     github: manastech/webmock.cr
     branch: master

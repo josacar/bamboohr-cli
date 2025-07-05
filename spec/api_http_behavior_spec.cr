@@ -1,13 +1,21 @@
 require "spec"
 require "webmock"
 require "json"
+require "timecop"
 
 # Load the actual API class for testing
 require "../src/bamboohr_cli"
 
+def mocked_time
+  # 4th July 2025 10:10:10 UTC
+  Time.utc(2025, 7, 4, 10, 10, 10)
+end
+
 describe "BambooHR API HTTP Behavior" do
   # Configure WebMock for each test
   Spec.before_each &->WebMock.reset
+  Spec.around_each { |e| Timecop.travel(mocked_time) { e.run } }
+  WebMock.allow_net_connect = false
   WebMock.stub(:any, "//")
 
   describe "Clock In HTTP Requests" do
@@ -40,18 +48,11 @@ describe "BambooHR API HTTP Behavior" do
         # Given: API client
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
 
+        expected_body = {"date" => "2025-07-04","start" => "10:10","timezone" => "UTC"}
+
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
-          .to_return(status: 200, body: {"id" => 1, "employeeId" => 123}.to_json, headers: {"Authorization" => "Basic"})
-
-        # if auth_header = captured_headers["Authorization"]?
-        #   auth_header.should start_with("Basic ")
-
-        #   # Verify Basic Auth encoding (api_key:x)
-        #   encoded_credentials = auth_header.sub("Basic ", "")
-        #   decoded = Base64.decode_string(encoded_credentials)
-        #   decoded.should eq("test-api-key:x")
-        # end
-        # captured_headers["Content-Type"]?.should eq("application/json")
+          .with(body: expected_body.to_json, headers: { "Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}" })
+          .to_return(status: 200, body: {"id" => 1, "employeeId" => 123}.to_json)
 
         # When: Making API request
         success, _ = api.clock_in
@@ -64,7 +65,10 @@ describe "BambooHR API HTTP Behavior" do
         # Given: API client
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
 
+        expected_body = {"note" => "Working on feature X", "projectId" => 456, "taskId" => 789, "date" => "2025-07-04", "start" => "10:10", "timezone" => "UTC"}
+
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
+          .with(body: expected_body.to_json, headers: { "Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}" })
           .to_return(status: 200, body: {"id" => 1}.to_json)
 
         # When: Clock in with note and project
@@ -72,13 +76,6 @@ describe "BambooHR API HTTP Behavior" do
 
         # Then: Should include optional parameters
         success.should be_true
-
-        # if !captured_body.empty?
-        #   parsed_request = JSON.parse(captured_body)
-        #   parsed_request["note"].should eq("Working on feature X")
-        #   parsed_request["projectId"].should eq(456)
-        #   parsed_request["taskId"].should eq(789)
-        # end
       end
     end
 
@@ -103,8 +100,8 @@ describe "BambooHR API HTTP Behavior" do
         # Then: Should handle error gracefully
         success.should be_false
         entry.should be_nil
-        # api.get_last_response_status.should eq(401)
-        # api.get_last_response_body.should contain("Invalid API key")
+        api.get_last_response_status.not_nil!.should eq(401)
+        api.get_last_response_body.not_nil!.should contain("Invalid API key")
       end
 
       it "should handle 409 Conflict (already clocked in)" do
@@ -141,7 +138,10 @@ describe "BambooHR API HTTP Behavior" do
           "hours"      => 8.5,
         }.to_json
 
+        expected_body = {"date" => "2025-07-04", "end" => "10:10", "timezone" => "UTC"}
+
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_out")
+          .with(body: expected_body.to_json, headers: { "Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}" })
           .to_return(status: 200, body: expected_response)
 
         # When: Making clock out request
@@ -151,13 +151,6 @@ describe "BambooHR API HTTP Behavior" do
         success.should be_true
         entry.should_not be_nil
         entry.not_nil!.hours.should eq(8.5)
-
-        # Verify request contains UTC end time
-        # if !captured_body.empty?
-        #   parsed_request = JSON.parse(captured_body)
-        #   parsed_request["timezone"].should eq("UTC")
-        #   parsed_request["end"].should match(/\d{2}:\d{2}/)
-        # end
       end
     end
   end
