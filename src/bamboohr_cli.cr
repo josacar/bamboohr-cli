@@ -5,24 +5,6 @@ require "./bamboohr_cli/cli"
 require "colorize"
 require "option_parser"
 
-# Legacy Config struct for backward compatibility
-struct Config
-  property company_domain : String
-  property api_key : String
-  property employee_id : String
-
-  def initialize(@company_domain : String, @api_key : String, @employee_id : String)
-  end
-
-  def self.from_app_config(app_config : BambooHRCLI::AppConfig)
-    new(app_config.company_domain, app_config.api_key, app_config.employee_id)
-  end
-
-  def valid?
-    !company_domain.empty? && !api_key.empty? && !employee_id.empty?
-  end
-end
-
 # CLI argument parsing
 class CLIParser
   def self.parse(args : Array(String))
@@ -135,15 +117,12 @@ unless PROGRAM_NAME.includes?("crystal-run-spec")
     end
 
     # Get configuration using XDG-compliant manager
-    app_config = BambooHRCLI::ConfigManager.get_config
+    config = BambooHRCLI::ConfigManager.get_config
 
-    unless app_config.valid?
+    unless config.valid?
       puts "❌ Invalid configuration. Please check your settings.".colorize(:red)
       exit 1
     end
-
-    # Convert to legacy Config for compatibility
-    config = Config.from_app_config(app_config)
 
     # Create and run CLI
     cli = BambooHRCLI::CLI.new(config.company_domain, config.api_key, config.employee_id)

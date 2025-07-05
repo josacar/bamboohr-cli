@@ -2,51 +2,6 @@ require "spec"
 require "../src/bamboohr_cli/cli"
 require "../src/bamboohr_cli/api"
 
-describe "Config" do
-  describe "initialization" do
-    it "creates a config with all parameters" do
-      config = Config.new("testcompany", "testkey", "123")
-
-      config.company_domain.should eq("testcompany")
-      config.api_key.should eq("testkey")
-      config.employee_id.should eq("123")
-    end
-  end
-
-  describe "validation" do
-    it "validates complete configuration" do
-      config = Config.new("testcompany", "testkey", "123")
-      config.valid?.should be_true
-    end
-
-    it "invalidates empty company domain" do
-      config = Config.new("", "testkey", "123")
-      config.valid?.should be_false
-    end
-
-    it "invalidates empty API key" do
-      config = Config.new("testcompany", "", "123")
-      config.valid?.should be_false
-    end
-
-    it "invalidates empty employee ID" do
-      config = Config.new("testcompany", "testkey", "")
-      config.valid?.should be_false
-    end
-  end
-
-  describe "from_app_config" do
-    it "converts from AppConfig correctly" do
-      app_config = BambooHRCLI::AppConfig.new("testcompany", "testkey", "123")
-      config = Config.from_app_config(app_config)
-
-      config.company_domain.should eq("testcompany")
-      config.api_key.should eq("testkey")
-      config.employee_id.should eq("123")
-    end
-  end
-end
-
 describe "CLIParser" do
   describe "parse" do
     it "returns :interactive for no arguments" do
