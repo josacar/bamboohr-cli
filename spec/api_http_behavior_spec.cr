@@ -48,10 +48,10 @@ describe "BambooHR API HTTP Behavior" do
         # Given: API client
         api = BambooHRCLI::API.new("test-company", "test-api-key", "123")
 
-        expected_body = {"date" => "2025-07-04","start" => "10:10","timezone" => "UTC"}
+        expected_body = {"date" => "2025-07-04", "start" => "10:10", "timezone" => "UTC"}
 
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
-          .with(body: expected_body.to_json, headers: { "Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}" })
+          .with(body: expected_body.to_json, headers: {"Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}"})
           .to_return(status: 200, body: {"id" => 1, "employeeId" => 123}.to_json)
 
         # When: Making API request
@@ -68,7 +68,7 @@ describe "BambooHR API HTTP Behavior" do
         expected_body = {"note" => "Working on feature X", "projectId" => 456, "taskId" => 789, "date" => "2025-07-04", "start" => "10:10", "timezone" => "UTC"}
 
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_in")
-          .with(body: expected_body.to_json, headers: { "Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}" })
+          .with(body: expected_body.to_json, headers: {"Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}"})
           .to_return(status: 200, body: {"id" => 1}.to_json)
 
         # When: Clock in with note and project
@@ -141,7 +141,7 @@ describe "BambooHR API HTTP Behavior" do
         expected_body = {"date" => "2025-07-04", "end" => "10:10", "timezone" => "UTC"}
 
         WebMock.stub(:post, "https://test-company.bamboohr.com/api/v1/time_tracking/employees/123/clock_out")
-          .with(body: expected_body.to_json, headers: { "Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}" })
+          .with(body: expected_body.to_json, headers: {"Authorization" => "Basic #{Base64.strict_encode("test-api-key:x")}"})
           .to_return(status: 200, body: expected_response)
 
         # When: Making clock out request
