@@ -127,8 +127,16 @@ module BambooHRCLI
 
         # Only clear session and stop updates on successful clock out
         @current_session_start = nil
+        @cached_session_start = nil
         stop_real_time_updates
-        refresh_daily_total
+        
+        # Force fresh daily total refresh to include the completed session
+        @io.puts "🔄 Updating daily total...".colorize(:cyan)
+        force_refresh_daily_total
+        
+        # Show updated daily total
+        @io.puts "📊 Updated daily total: #{format_duration(@daily_total_seconds)}".colorize(:blue)
+        
         true
       else
         handle_api_error("clock out")
@@ -209,6 +217,22 @@ module BambooHRCLI
           @current_session_start = @cached_session_start
           @daily_total_seconds = @cached_daily_sessions
         end
+      end
+    end
+
+    def force_refresh_daily_total
+      # Force fresh daily total from API, bypassing cache
+      today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
+      success, total_seconds = @api.get_daily_total(today_str)
+
+      if success
+        # Update both current and cached daily total
+        @daily_total_seconds = total_seconds
+        @cached_daily_sessions = total_seconds
+        @cache_date = today_str
+        @last_status_check = Time.local
+      else
+        @io.puts "⚠️  Could not fetch updated daily total".colorize(:yellow)
       end
     end
 
