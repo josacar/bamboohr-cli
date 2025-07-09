@@ -11,12 +11,24 @@ module BambooHRCLI
     @update_channel : Channel(Bool)?
     @last_daily_refresh : Time
 
+    # Caching properties to reduce API calls
+    @cached_session_start : Time?
+    @cached_daily_sessions : Int32
+    @cache_date : String?
+    @last_status_check : Time?
+
     def initialize(@company_domain : String, @api_key : String, @employee_id : String, @io : IO = STDOUT)
       @api = API.new(@company_domain, @api_key, @employee_id)
       @current_session_start = nil
       @daily_total_seconds = 0
       @update_channel = nil
       @last_daily_refresh = Time.local
+
+      # Initialize cache
+      @cached_session_start = nil
+      @cached_daily_sessions = 0
+      @cache_date = nil
+      @last_status_check = nil
     end
 
     def run_interactive
@@ -25,8 +37,9 @@ module BambooHRCLI
       @io.puts "Employee ID: #{@employee_id}".colorize(:light_gray)
       @io.puts "─" * 50
 
-      # Check initial status
-      refresh_status
+      # Force immediate refresh on startup (bypass cache)
+      @io.puts "🔄 Fetching current status...".colorize(:cyan)
+      force_refresh_status
 
       # Start real-time updates if already clocked in
       if @current_session_start
@@ -48,6 +61,8 @@ module BambooHRCLI
           end
         else
           if clock_in
+            # Force immediate refresh after clocking in
+            force_immediate_refresh
             start_real_time_updates
           end
         end
@@ -62,13 +77,29 @@ module BambooHRCLI
       success, entry = @api.clock_in(note, project_id, task_id)
 
       if success
-        @current_session_start = Time.local
+        current_time = Time.local
+        today_str = current_time.at_beginning_of_day.to_s("%Y-%m-%d")
+
+        # Cache the session start time
+        @current_session_start = current_time
+        @cached_session_start = current_time
+        @cache_date = today_str
+        @last_status_check = current_time
+
         if entry
-          @io.puts "✅ Successfully clocked in at #{format_time(Time.local)} (Entry ID: #{entry.id})".colorize(:green)
+          @io.puts "✅ Successfully clocked in at #{format_time(current_time)} (Entry ID: #{entry.id})".colorize(:green)
         else
-          @io.puts "✅ Successfully clocked in at #{format_time(Time.local)}".colorize(:green)
+          @io.puts "✅ Successfully clocked in at #{format_time(current_time)}".colorize(:green)
         end
-        refresh_daily_total
+
+        # Use cached daily sessions if available, otherwise fetch fresh data
+        if @cache_date == today_str && @cached_daily_sessions >= 0
+          @io.puts "📋 Using cached daily sessions data".colorize(:cyan)
+          @daily_total_seconds = @cached_daily_sessions
+        else
+          refresh_daily_total_with_cache
+        end
+
         true
       else
         handle_api_error("clock in")
@@ -106,20 +137,108 @@ module BambooHRCLI
       end
     end
 
+    def force_refresh_status
+      # Force fresh data from API, bypassing cache
+      success, session_start = @api.get_current_status
+
+      if success
+        current_time = Time.local
+        today_str = current_time.at_beginning_of_day.to_s("%Y-%m-%d")
+        
+        @current_session_start = session_start
+        @cached_session_start = session_start
+        @cache_date = today_str
+        @last_status_check = current_time
+        
+        # Force refresh daily total as well
+        refresh_daily_total_with_cache
+      else
+        @io.puts "⚠️  Could not fetch clock status".colorize(:yellow)
+        # Fall back to cached data if available
+        if @cached_session_start && is_cache_valid_for_today?
+          @io.puts "📋 Using cached session data due to API error".colorize(:yellow)
+          @current_session_start = @cached_session_start
+          @daily_total_seconds = @cached_daily_sessions
+        end
+      end
+    end
+
+    def force_immediate_refresh
+      # Force an immediate display update after clock-in
+      @io.puts "🔄 Refreshing status...".colorize(:cyan)
+      
+      # Update the last refresh time to force immediate refresh in real-time updates
+      @last_daily_refresh = Time.local - 31.seconds
+      
+      # Display current status immediately
+      if @current_session_start
+        display_status_inline
+        @io.puts # Add newline after inline display
+      end
+    end
+
     def refresh_status
+      current_time = Time.local
+      today_str = current_time.at_beginning_of_day.to_s("%Y-%m-%d")
+
+      # Use cached data if available and recent (within 5 minutes)
+      if @last_status_check && @cache_date == today_str &&
+         (current_time - @last_status_check.not_nil!).total_minutes < 5
+        @io.puts "📋 Using cached session data".colorize(:cyan)
+        @current_session_start = @cached_session_start
+        @daily_total_seconds = @cached_daily_sessions
+        return
+      end
+
+      # Fetch fresh data from API
       success, session_start = @api.get_current_status
 
       if success
         @current_session_start = session_start
+        @cached_session_start = session_start
+        @cache_date = today_str
+        @last_status_check = current_time
+
+        # Cache the daily sessions (excluding current session)
+        refresh_daily_total_with_cache
       else
         @io.puts "⚠️  Could not fetch clock status".colorize(:yellow)
+        # Fall back to cached data if available
+        if @cached_session_start && @cache_date == today_str
+          @io.puts "📋 Using cached session data due to API error".colorize(:yellow)
+          @current_session_start = @cached_session_start
+          @daily_total_seconds = @cached_daily_sessions
+        end
       end
+    end
 
-      refresh_daily_total
+    def refresh_daily_total_with_cache
+      today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
+      success, total_seconds = @api.get_daily_total(today_str)
+
+      if success
+        # Cache the completed daily sessions (excluding current session)
+        if start_time = @current_session_start
+          current_session_seconds = (Time.local - start_time).total_seconds.to_i
+          @daily_total_seconds = total_seconds - current_session_seconds
+          @cached_daily_sessions = @daily_total_seconds
+        else
+          @daily_total_seconds = total_seconds
+          @cached_daily_sessions = total_seconds
+        end
+      end
     end
 
     def refresh_daily_total
       today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
+
+      # Use cached data if available and cache is for today
+      if @cache_date == today_str && @cached_daily_sessions >= 0
+        @daily_total_seconds = @cached_daily_sessions
+        return
+      end
+
+      # Fetch fresh data if no cache available
       success, total_seconds = @api.get_daily_total(today_str)
 
       if success
@@ -139,19 +258,37 @@ module BambooHRCLI
 
       if channel = @update_channel
         spawn do
+          # Force immediate first update when starting real-time updates
+          if @current_session_start
+            @io.puts "🔄 Starting real-time updates...".colorize(:cyan)
+            display_status_inline
+            @io.puts # Add newline after inline display
+            
+            # Force refresh daily total on first update
+            refresh_daily_total_with_cache
+            @last_daily_refresh = Time.local
+          end
+          
           loop do
             select
             when channel.receive?
               # Exit the refresh loop
               break
-            when timeout(1.second)
-              # Update display every second when clocked in
+            when timeout(30.seconds)
+              # Real-time updates every 30 seconds when clocked in
               if @current_session_start
                 display_status_inline
 
-                # Refresh daily total every 30 seconds
+                # Refresh daily total every 30 seconds, but use cache when possible
                 if (Time.local - @last_daily_refresh).total_seconds > 30
-                  refresh_daily_total
+                  # Only fetch fresh data if cache is invalid or stale
+                  if !is_cache_valid_for_today? ||
+                     (@last_status_check && (Time.local - @last_status_check.not_nil!).total_minutes > 10)
+                    refresh_daily_total_with_cache
+                  else
+                    # Use cached data for display
+                    refresh_daily_total
+                  end
                   @last_daily_refresh = Time.local
                 end
               end
@@ -215,8 +352,38 @@ module BambooHRCLI
       @api
     end
 
+    # Cache status methods for testing and debugging
+    def cached_session_start
+      @cached_session_start
+    end
+
+    def cached_daily_sessions
+      @cached_daily_sessions
+    end
+
+    def cache_date
+      @cache_date
+    end
+
+    def is_cache_valid?
+      is_cache_valid_for_today?
+    end
+
     def cleanup
       stop_real_time_updates
+      clear_cache
+    end
+
+    private def clear_cache
+      @cached_session_start = nil
+      @cached_daily_sessions = 0
+      @cache_date = nil
+      @last_status_check = nil
+    end
+
+    private def is_cache_valid_for_today? : Bool
+      today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
+      @cache_date == today_str
     end
 
     private def handle_api_error(action : String)
