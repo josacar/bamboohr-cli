@@ -144,12 +144,12 @@ module BambooHRCLI
       if success
         current_time = Time.local
         today_str = current_time.at_beginning_of_day.to_s("%Y-%m-%d")
-        
+
         @current_session_start = session_start
         @cached_session_start = session_start
         @cache_date = today_str
         @last_status_check = current_time
-        
+
         # Force refresh daily total as well
         refresh_daily_total_with_cache
       else
@@ -166,10 +166,10 @@ module BambooHRCLI
     def force_immediate_refresh
       # Force an immediate display update after clock-in
       @io.puts "🔄 Refreshing status...".colorize(:cyan)
-      
+
       # Update the last refresh time to force immediate refresh in real-time updates
       @last_daily_refresh = Time.local - 31.seconds
-      
+
       # Display current status immediately
       if @current_session_start
         display_status_inline
@@ -263,12 +263,12 @@ module BambooHRCLI
             @io.puts "🔄 Starting real-time updates...".colorize(:cyan)
             display_status_inline
             @io.puts # Add newline after inline display
-            
+
             # Force refresh daily total on first update
             refresh_daily_total_with_cache
             @last_daily_refresh = Time.local
           end
-          
+
           loop do
             select
             when channel.receive?
