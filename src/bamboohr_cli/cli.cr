@@ -129,14 +129,14 @@ module BambooHRCLI
         @current_session_start = nil
         @cached_session_start = nil
         stop_real_time_updates
-        
+
         # Force fresh daily total refresh to include the completed session
         @io.puts "🔄 Updating daily total...".colorize(:cyan)
         force_refresh_daily_total
-        
+
         # Show updated daily total
         @io.puts "📊 Updated daily total: #{format_duration(@daily_total_seconds)}".colorize(:blue)
-        
+
         true
       else
         handle_api_error("clock out")
