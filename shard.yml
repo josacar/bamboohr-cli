@@ -1,5 +1,5 @@
 name: bamboohr-cli
-version: 1.0.2
+version: 1.0.3
 
 description: |
   A modern, interactive command-line interface for BambooHR time tracking.
