@@ -7,7 +7,7 @@ description: |
   and professional terminal prompting powered by crystal-term/prompt.
 
 authors:
-  - Jose Luis <joseluis@example.com>
+  - Jose Luis <josacar@users.noreply.github.com>
 
 crystal: ">= 1.0.0"
 
@@ -20,7 +20,7 @@ targets:
 dependencies:
   term-prompt:
     github: crystal-term/prompt
-    version: ~> 0.2.0
+    version: ~> 0.3
 
 development_dependencies:
   timecop:

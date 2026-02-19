@@ -177,6 +177,39 @@ module BambooHRCLI
       end
     end
 
+    def get_weekly_total : {Bool, Int32}
+      today = Time.local
+      monday = today.at_beginning_of_week
+      monday_str = monday.to_s("%Y-%m-%d")
+      today_str = today.to_s("%Y-%m-%d")
+
+      success, entries = get_timesheet_entries(monday_str, today_str)
+
+      if success && entries
+        total_seconds = 0
+
+        entries.each do |entry|
+          if start_str = entry.start
+            begin
+              start_time = Time.parse_iso8601(start_str)
+
+              if end_str = entry.end
+                end_time = Time.parse_iso8601(end_str)
+                total_seconds += (end_time - start_time).total_seconds.to_i
+              else
+                total_seconds += (Time.local - start_time).total_seconds.to_i
+              end
+            rescue
+            end
+          end
+        end
+
+        return {true, total_seconds}
+      else
+        return {false, 0}
+      end
+    end
+
     def get_last_response_status : Int32?
       @last_response_status
     end

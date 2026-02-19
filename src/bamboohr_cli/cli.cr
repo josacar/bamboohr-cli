@@ -7,6 +7,7 @@ module BambooHRCLI
     @api : API
     @current_session_start : Time?
     @daily_total_seconds : Int32
+    @weekly_total_seconds : Int32
     @io : IO
     @update_channel : Channel(Bool)?
     @last_daily_refresh : Time
@@ -14,6 +15,7 @@ module BambooHRCLI
     # Caching properties to reduce API calls
     @cached_session_start : Time?
     @cached_daily_sessions : Int32
+    @cached_weekly_sessions : Int32
     @cache_date : String?
     @last_status_check : Time?
 
@@ -21,12 +23,14 @@ module BambooHRCLI
       @api = API.new(@company_domain, @api_key, @employee_id)
       @current_session_start = nil
       @daily_total_seconds = 0
+      @weekly_total_seconds = 0
       @update_channel = nil
       @last_daily_refresh = Time.local
 
       # Initialize cache
       @cached_session_start = nil
       @cached_daily_sessions = 0
+      @cached_weekly_sessions = 0
       @cache_date = nil
       @last_status_check = nil
     end
@@ -105,8 +109,10 @@ module BambooHRCLI
         if @cache_date == today_str && @cached_daily_sessions >= 0
           @io.puts "📋 Using cached daily sessions data".colorize(:cyan)
           @daily_total_seconds = @cached_daily_sessions
+          @weekly_total_seconds = @cached_weekly_sessions
         else
           refresh_daily_total_with_cache
+          refresh_weekly_total_with_cache
         end
 
         true
@@ -167,8 +173,9 @@ module BambooHRCLI
         @cache_date = today_str
         @last_status_check = current_time
 
-        # Force refresh daily total as well
+        # Force refresh daily and weekly totals
         refresh_daily_total_with_cache
+        refresh_weekly_total_with_cache
       else
         @io.puts "⚠️  Could not fetch clock status".colorize(:yellow)
         # Fall back to cached data if available
@@ -176,6 +183,7 @@ module BambooHRCLI
           @io.puts "📋 Using cached session data due to API error".colorize(:yellow)
           @current_session_start = @cached_session_start
           @daily_total_seconds = @cached_daily_sessions
+          @weekly_total_seconds = @cached_weekly_sessions
         end
       end
     end
@@ -204,6 +212,7 @@ module BambooHRCLI
         @io.puts "📋 Using cached session data".colorize(:cyan)
         @current_session_start = @cached_session_start
         @daily_total_seconds = @cached_daily_sessions
+        @weekly_total_seconds = @cached_weekly_sessions
         return
       end
 
@@ -216,8 +225,9 @@ module BambooHRCLI
         @cache_date = today_str
         @last_status_check = current_time
 
-        # Cache the daily sessions (excluding current session)
+        # Cache the daily and weekly sessions
         refresh_daily_total_with_cache
+        refresh_weekly_total_with_cache
       else
         @io.puts "⚠️  Could not fetch clock status".colorize(:yellow)
         # Fall back to cached data if available
@@ -225,6 +235,7 @@ module BambooHRCLI
           @io.puts "📋 Using cached session data due to API error".colorize(:yellow)
           @current_session_start = @cached_session_start
           @daily_total_seconds = @cached_daily_sessions
+          @weekly_total_seconds = @cached_weekly_sessions
         end
       end
     end
@@ -243,6 +254,14 @@ module BambooHRCLI
       else
         @io.puts "⚠️  Could not fetch updated daily total".colorize(:yellow)
       end
+
+      # Also refresh weekly total
+      success_weekly, weekly_seconds = @api.get_weekly_total
+
+      if success_weekly
+        @weekly_total_seconds = weekly_seconds
+        @cached_weekly_sessions = weekly_seconds
+      end
     end
 
     def refresh_daily_total_with_cache
@@ -258,6 +277,21 @@ module BambooHRCLI
         else
           @daily_total_seconds = total_seconds
           @cached_daily_sessions = total_seconds
+        end
+      end
+    end
+
+    def refresh_weekly_total_with_cache
+      success, total_seconds = @api.get_weekly_total
+
+      if success
+        if start_time = @current_session_start
+          current_session_seconds = (Time.local - start_time).total_seconds.to_i
+          @weekly_total_seconds = total_seconds - current_session_seconds
+          @cached_weekly_sessions = @weekly_total_seconds
+        else
+          @weekly_total_seconds = total_seconds
+          @cached_weekly_sessions = total_seconds
         end
       end
     end
@@ -341,9 +375,10 @@ module BambooHRCLI
     def display_status
       unless @current_session_start
         status = "🔴 CLOCKED OUT"
-        daily_info = "Daily total: #{format_duration(@daily_total_seconds)}"
+        daily_info = "Daily: #{format_duration(@daily_total_seconds)}"
+        weekly_info = "Weekly: #{format_duration(@weekly_total_seconds)}"
 
-        @io.puts "#{status.colorize(:red)} | #{daily_info.colorize(:blue)}"
+        @io.puts "#{status.colorize(:red)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}"
       end
 
       @io.print "Press ENTER to #{@current_session_start ? "clock out" : "clock in"} (Ctrl+C to exit): "
@@ -356,16 +391,18 @@ module BambooHRCLI
       if start_time = @current_session_start
         current_session = (Time.local - start_time).total_seconds.to_i
         status = "🟢 CLOCKED IN"
-        session_info = "Current session: #{format_duration(current_session)}"
-        daily_info = "Daily total: #{format_duration(@daily_total_seconds + current_session)}"
+        session_info = "Session: #{format_duration(current_session)}"
+        daily_info = "Daily: #{format_duration(@daily_total_seconds + current_session)}"
+        weekly_info = "Weekly: #{format_duration(@weekly_total_seconds + current_session)}"
 
-        @io.print "#{status.colorize(:green)} | #{session_info.colorize(:cyan)} | #{daily_info.colorize(:blue)}"
+        @io.print "#{status.colorize(:green)} | #{session_info.colorize(:cyan)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}"
         @io.print " | Press ENTER to clock out (Ctrl+C to exit): "
       else
         status = "🔴 CLOCKED OUT"
-        daily_info = "Daily total: #{format_duration(@daily_total_seconds)}"
+        daily_info = "Daily: #{format_duration(@daily_total_seconds)}"
+        weekly_info = "Weekly: #{format_duration(@weekly_total_seconds)}"
 
-        @io.print "#{status.colorize(:red)} | #{daily_info.colorize(:blue)}"
+        @io.print "#{status.colorize(:red)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}"
         @io.print " | Press ENTER to clock in (Ctrl+C to exit): "
       end
 
@@ -410,6 +447,7 @@ module BambooHRCLI
     private def clear_cache
       @cached_session_start = nil
       @cached_daily_sessions = 0
+      @cached_weekly_sessions = 0
       @cache_date = nil
       @last_status_check = nil
     end

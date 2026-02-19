@@ -43,7 +43,7 @@ sudo make install  # Optional: install to system PATH
 dependencies:
   bamboohr-cli:
     github: josacar/bamboohr-cli
-    version: ~> 1.0.0
+    version: ~> 1.0.3
 ```
 
 ### First Run

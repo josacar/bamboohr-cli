@@ -183,7 +183,8 @@ describe "BambooHRCLI::CLI" do
       # Verify output was written to our IO
       output = io.to_s
       output.should contain("CLOCKED OUT")
-      output.should contain("Daily total")
+      output.should contain("Daily:")
+      output.should contain("Weekly:")
 
       # Test passes if no exception is raised
       true.should be_true
@@ -200,7 +201,8 @@ describe "BambooHRCLI::CLI" do
       # Should show clocked out status by default
       output = io.to_s
       output.should contain("CLOCKED OUT")
-      output.should contain("Daily total")
+      output.should contain("Daily:")
+      output.should contain("Weekly:")
     end
   end
 

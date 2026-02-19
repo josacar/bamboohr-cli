@@ -5,8 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-02-19
+
+### Fixed
+- Improved input handling to only respond to Enter key
+- Fixed daily total calculation to display accurate time
+
+### Changed
+- Added session caching to reduce API calls
+- Optimized release builds without debug symbols
+
+## [1.0.2] - 2024-07-05
+
+### Fixed
+- Display proper daily total calculation
+- Reformat blank lines for better output
+
+### Changed
+- Add caching in session for less API calls
+- Build release without debug symbols
+
 ## [1.0.1] - 2024-07-04
-- Cleanups and refactoring
+
+### Changed
+- Code cleanups and refactoring
+- Remove redundant Config class
+- Organize file structure
+- Lint and format code
 
 ## [1.0.0] - 2024-07-03
 
@@ -57,4 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Retrieves time entries and daily totals
 - Handles API errors gracefully
 
+[1.0.3]: https://github.com/josacar/bamboohr-cli/releases/tag/v1.0.3
+[1.0.2]: https://github.com/josacar/bamboohr-cli/releases/tag/v1.0.2
+[1.0.1]: https://github.com/josacar/bamboohr-cli/releases/tag/v1.0.1
 [1.0.0]: https://github.com/josacar/bamboohr-cli/releases/tag/v1.0.0
