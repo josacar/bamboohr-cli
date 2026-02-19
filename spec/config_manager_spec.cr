@@ -10,11 +10,17 @@ end
 describe "AppConfig" do
   describe "initialization" do
     it "creates config with all parameters" do
-      config = BambooHRCLI::AppConfig.new("testcompany", "testkey", "123")
+      config = BambooHRCLI::AppConfig.new("testcompany", "testkey", "123", 8)
 
       config.company_domain.should eq("testcompany")
       config.api_key.should eq("testkey")
       config.employee_id.should eq("123")
+      config.hours_per_day.should eq(8)
+    end
+
+    it "creates config with default hours_per_day" do
+      config = BambooHRCLI::AppConfig.new("testcompany", "testkey", "123")
+      config.hours_per_day.should eq(8)
     end
   end
 
@@ -42,12 +48,13 @@ describe "AppConfig" do
 
   describe "YAML serialization" do
     it "can serialize to YAML" do
-      config = BambooHRCLI::AppConfig.new("testcompany", "testkey", "123")
+      config = BambooHRCLI::AppConfig.new("testcompany", "testkey", "123", 8)
       yaml = config.to_yaml
 
       yaml.should contain("company_domain: testcompany")
       yaml.should contain("api_key: testkey")
       yaml.should contain("employee_id: \"123\"")
+      yaml.should contain("hours_per_day: 8")
     end
 
     it "can deserialize from YAML" do
@@ -55,12 +62,14 @@ describe "AppConfig" do
       company_domain: testcompany
       api_key: testkey
       employee_id: "123"
+      hours_per_day: 8
       YAML
 
       config = BambooHRCLI::AppConfig.from_yaml(yaml_content)
       config.company_domain.should eq("testcompany")
       config.api_key.should eq("testkey")
       config.employee_id.should eq("123")
+      config.hours_per_day.should eq(8)
     end
 
     it "handles YAML with comments" do
@@ -70,12 +79,14 @@ describe "AppConfig" do
       # API key comment
       api_key: testkey
       employee_id: "123"
+      hours_per_day: 8
       YAML
 
       config = BambooHRCLI::AppConfig.from_yaml(yaml_content)
       config.company_domain.should eq("testcompany")
       config.api_key.should eq("testkey")
       config.employee_id.should eq("123")
+      config.hours_per_day.should eq(8)
     end
   end
 end

@@ -11,6 +11,7 @@ A modern, interactive command-line interface for BambooHR time tracking, built w
 - 🕐 **Interactive clock in/out functionality**
 - ⏱️ **Real-time display of current session duration** (updates every second when clocked in)
 - 📊 **Live daily total time tracking** (includes current session + completed sessions)
+- 📅 **Weekly time off tracking** (displays approved time off hours for the current week)
 - 🎨 **Colorized output** for better visibility
 - 🔄 **Automatic status updates** with periodic API refresh
 - 🛡️ **Error handling and network resilience**
@@ -80,13 +81,15 @@ Company: mycompany
 Employee ID: 12345
 ──────────────────────────────────────────────────
 
-🟢 CLOCKED IN | Current session: 2h 15m 30s | Daily total: 6h 45m 30s
+🟢 CLOCKED IN | Session: 2h 15m 30s | Daily: 6h 45m 30s | Weekly: 32h 15m 30s | Time off: 4h
 Press ENTER to clock out (Ctrl+C to exit):
 ```
 
 **Real-time updates when clocked in:**
 - Current session time updates every second
 - Daily total includes current session + previous sessions
+- Weekly total shows all time tracked this week
+- Time off displays approved time off hours for the current week
 - Live display without interrupting user interaction
 
 ### Command Line Options
@@ -134,6 +137,9 @@ api_key: "your_api_key_here"
 
 # Your employee ID (found in your BambooHR profile URL)
 employee_id: "123"
+
+# Hours per day (default: 8, used to calculate time off in hours)
+hours_per_day: 8
 ```
 
 ## 🏗️ Development

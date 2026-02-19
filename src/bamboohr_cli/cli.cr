@@ -8,6 +8,8 @@ module BambooHRCLI
     @current_session_start : Time?
     @daily_total_seconds : Int32
     @weekly_total_seconds : Int32
+    @weekly_time_off_hours : Float32
+    @hours_per_day : Int32
     @io : IO
     @update_channel : Channel(Bool)?
     @last_daily_refresh : Time
@@ -19,11 +21,12 @@ module BambooHRCLI
     @cache_date : String?
     @last_status_check : Time?
 
-    def initialize(@company_domain : String, @api_key : String, @employee_id : String, @io : IO = STDOUT)
+    def initialize(@company_domain : String, @api_key : String, @employee_id : String, @hours_per_day : Int32 = 8, @io : IO = STDOUT)
       @api = API.new(@company_domain, @api_key, @employee_id)
       @current_session_start = nil
       @daily_total_seconds = 0
       @weekly_total_seconds = 0
+      @weekly_time_off_hours = 0.0
       @update_channel = nil
       @last_daily_refresh = Time.local
 
@@ -294,6 +297,29 @@ module BambooHRCLI
           @cached_weekly_sessions = total_seconds
         end
       end
+
+      # Fetch time off for the week
+      refresh_weekly_time_off
+    end
+
+    def refresh_weekly_time_off
+      today = Time.local
+      monday = today.at_beginning_of_week
+      monday_str = monday.to_s("%Y-%m-%d")
+      today_str = today.to_s("%Y-%m-%d")
+
+      success, requests = @api.get_time_off_requests(monday_str, today_str)
+
+      if success && requests
+        total_hours = 0.0_f32
+        requests.each do |request|
+          if request.status.status == "approved" && request.amount.unit == "days"
+            days = request.amount.amount.to_f32
+            total_hours += days * @hours_per_day
+          end
+        end
+        @weekly_time_off_hours = total_hours
+      end
     end
 
     def refresh_daily_total
@@ -377,8 +403,9 @@ module BambooHRCLI
         status = "🔴 CLOCKED OUT"
         daily_info = "Daily: #{format_duration(@daily_total_seconds)}"
         weekly_info = "Weekly: #{format_duration(@weekly_total_seconds)}"
+        time_off_info = @weekly_time_off_hours > 0 ? " | Time off: #{@weekly_time_off_hours}h" : ""
 
-        @io.puts "#{status.colorize(:red)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}"
+        @io.puts "#{status.colorize(:red)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}#{time_off_info.colorize(:yellow)}"
       end
 
       @io.print "Press ENTER to #{@current_session_start ? "clock out" : "clock in"} (Ctrl+C to exit): "
@@ -394,15 +421,17 @@ module BambooHRCLI
         session_info = "Session: #{format_duration(current_session)}"
         daily_info = "Daily: #{format_duration(@daily_total_seconds + current_session)}"
         weekly_info = "Weekly: #{format_duration(@weekly_total_seconds + current_session)}"
+        time_off_info = @weekly_time_off_hours > 0 ? " | Time off: #{@weekly_time_off_hours}h" : ""
 
-        @io.print "#{status.colorize(:green)} | #{session_info.colorize(:cyan)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}"
+        @io.print "#{status.colorize(:green)} | #{session_info.colorize(:cyan)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}#{time_off_info.colorize(:yellow)}"
         @io.print " | Press ENTER to clock out (Ctrl+C to exit): "
       else
         status = "🔴 CLOCKED OUT"
         daily_info = "Daily: #{format_duration(@daily_total_seconds)}"
         weekly_info = "Weekly: #{format_duration(@weekly_total_seconds)}"
+        time_off_info = @weekly_time_off_hours > 0 ? " | Time off: #{@weekly_time_off_hours}h" : ""
 
-        @io.print "#{status.colorize(:red)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}"
+        @io.print "#{status.colorize(:red)} | #{daily_info.colorize(:blue)} | #{weekly_info.colorize(:magenta)}#{time_off_info.colorize(:yellow)}"
         @io.print " | Press ENTER to clock in (Ctrl+C to exit): "
       end
 

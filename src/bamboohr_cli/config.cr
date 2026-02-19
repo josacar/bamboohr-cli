@@ -11,8 +11,9 @@ module BambooHRCLI
     property company_domain : String
     property api_key : String
     property employee_id : String
+    property hours_per_day : Int32
 
-    def initialize(@company_domain : String, @api_key : String, @employee_id : String)
+    def initialize(@company_domain : String, @api_key : String, @employee_id : String, @hours_per_day : Int32 = 8)
     end
 
     def valid?
@@ -158,6 +159,9 @@ module BambooHRCLI
         str << "\n"
         str << "# Your employee ID (found in your BambooHR profile URL)\n"
         str << "employee_id: #{config.employee_id.inspect}\n"
+        str << "\n"
+        str << "# Hours per day (default: 8, used to calculate time off in hours)\n"
+        str << "hours_per_day: #{config.hours_per_day}\n"
       end
     end
 

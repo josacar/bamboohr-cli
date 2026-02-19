@@ -125,7 +125,7 @@ unless PROGRAM_NAME.includes?("crystal-run-spec")
     end
 
     # Create and run CLI
-    cli = BambooHRCLI::CLI.new(config.company_domain, config.api_key, config.employee_id)
+    cli = BambooHRCLI::CLI.new(config.company_domain, config.api_key, config.employee_id, config.hours_per_day)
 
     # Handle Ctrl+C gracefully
     Signal::INT.trap do

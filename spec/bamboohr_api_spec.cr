@@ -49,6 +49,57 @@ describe "BambooHR API Models" do
       json.should contain("Test note")
     end
 
+  describe "TimeOffRequest" do
+    it "can be deserialized from JSON" do
+      json = %({
+        "id": "114040",
+        "start": "2026-02-16",
+        "end": "2026-02-16",
+        "amount": {
+          "unit": "days",
+          "amount": "0.5"
+        },
+        "type": {
+          "id": "104",
+          "name": "FlyBetter Days",
+          "icon": "medal"
+        },
+        "status": {
+          "status": "approved"
+        },
+        "dates": {
+          "2026-02-16": "0.5"
+        }
+      })
+
+      request = BambooHRCLI::TimeOffRequest.from_json(json)
+      request.id.should eq("114040")
+      request.start.should eq("2026-02-16")
+      request.end.should eq("2026-02-16")
+      request.amount.unit.should eq("days")
+      request.amount.amount.should eq("0.5")
+      request.type.name.should eq("FlyBetter Days")
+      request.status.status.should eq("approved")
+    end
+
+    it "can deserialize a collection from JSON" do
+      json = %([{
+        "id": "114040",
+        "start": "2026-02-16",
+        "end": "2026-02-16",
+        "amount": {"unit": "days", "amount": "0.5"},
+        "type": {"id": "104", "name": "Vacation", "icon": "airplane"},
+        "status": {"status": "approved"},
+        "dates": {"2026-02-16": "0.5"}
+      }])
+
+      requests = BambooHRCLI::TimeOffRequestCollection.from_json(json)
+      requests.size.should eq(1)
+      requests[0].id.should eq("114040")
+    end
+  end
+
+
     it "can be deserialized from JSON" do
       json_str = {
         "id"         => 123,
@@ -227,10 +278,18 @@ describe "API" do
 
     it "get_timesheet_entries returns success boolean and optional collection" do
       api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
-
-      success, entries = api.get_timesheet_entries("2024-01-01", "2024-01-01")
+      
+      success, entries = api.get_timesheet_entries("2024-01-01", "2024-01-31")
       success.should be_a(Bool)
       entries.should be_a(BambooHRCLI::EmployeeTimesheetEntryCollection?)
+    end
+
+    it "get_time_off_requests returns success boolean and optional collection" do
+      api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
+      
+      success, requests = api.get_time_off_requests("2026-02-16", "2026-02-19")
+      success.should be_a(Bool)
+      requests.should be_a(BambooHRCLI::TimeOffRequestCollection?)
     end
   end
 

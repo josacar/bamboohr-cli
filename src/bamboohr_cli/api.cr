@@ -48,6 +48,37 @@ module BambooHRCLI
   # The API returns a direct array, not an object with a property
   alias EmployeeTimesheetEntryCollection = Array(EmployeeTimesheetEntry)
 
+  struct TimeOffAmount
+    include JSON::Serializable
+    property unit : String
+    property amount : String
+  end
+
+  struct TimeOffType
+    include JSON::Serializable
+    property id : String
+    property name : String
+    property icon : String
+  end
+
+  struct TimeOffStatus
+    include JSON::Serializable
+    property status : String
+  end
+
+  struct TimeOffRequest
+    include JSON::Serializable
+    property id : String
+    property start : String
+    property end : String
+    property amount : TimeOffAmount
+    property type : TimeOffType
+    property status : TimeOffStatus
+    property dates : Hash(String, String)
+  end
+
+  alias TimeOffRequestCollection = Array(TimeOffRequest)
+
   # BambooHR API Client
   class API
     @auth_header : String
@@ -216,6 +247,22 @@ module BambooHRCLI
 
     def get_last_response_body : String?
       @last_response_body
+    end
+
+    def get_time_off_requests(start_date : String, end_date : String) : {Bool, TimeOffRequestCollection?}
+      path = "/api/v1/time_off/requests?employeeId=#{@employee_id}&start=#{start_date}&end=#{end_date}"
+      response = make_request("GET", path)
+
+      if response.success?
+        begin
+          requests = TimeOffRequestCollection.from_json(response.body)
+          return {true, requests}
+        rescue ex : JSON::ParseException
+          return {false, nil}
+        end
+      else
+        return {false, nil}
+      end
     end
 
     private def make_request(method : String, path : String, body : Hash(String, JSON::Any)? = nil) : HTTP::Client::Response

@@ -90,20 +90,32 @@ describe "BambooHRCLI::CLI" do
   describe "initialization" do
     it "creates a new CLI instance with correct parameters" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", 8, io)
       cli.should be_a(BambooHRCLI::CLI)
     end
 
     it "initializes with nil session start and zero daily total" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", 8, io)
       cli.current_session_start.should be_nil
       cli.daily_total_seconds.should eq(0)
     end
 
+    it "initializes with default hours_per_day of 8" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
+      cli.should be_a(BambooHRCLI::CLI)
+    end
+
+    it "initializes with custom hours_per_day" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", 7, io)
+      cli.should be_a(BambooHRCLI::CLI)
+    end
+
     it "creates an API client internally" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", 8, io)
       cli.api.should be_a(BambooHRCLI::API)
     end
 
@@ -116,7 +128,7 @@ describe "BambooHRCLI::CLI" do
   describe "clock operations" do
     it "clock_in returns boolean" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       # This will fail with test credentials, but should return a boolean
       result = cli.clock_in
@@ -128,7 +140,7 @@ describe "BambooHRCLI::CLI" do
 
     it "clock_out returns boolean" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       result = cli.clock_out
       result.should be_a(Bool)
@@ -139,7 +151,7 @@ describe "BambooHRCLI::CLI" do
 
     it "clock_in accepts optional parameters" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       result = cli.clock_in(note: "Test note", project_id: 10, task_id: 25)
       result.should be_a(Bool)
@@ -152,7 +164,7 @@ describe "BambooHRCLI::CLI" do
   describe "status management" do
     it "can refresh status without errors" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       # Should not raise an exception
       cli.refresh_status
@@ -164,7 +176,7 @@ describe "BambooHRCLI::CLI" do
 
     it "can refresh daily total without errors" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       cli.refresh_daily_total
 
@@ -175,7 +187,7 @@ describe "BambooHRCLI::CLI" do
   describe "display methods" do
     it "can display status without errors" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       # Should not raise an exception when displaying status
       cli.display_status
@@ -192,7 +204,7 @@ describe "BambooHRCLI::CLI" do
 
     it "displays different status when clocked in" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       # We can't directly set private instance variables in Crystal
       # Instead, let's just test the display method works
@@ -209,7 +221,7 @@ describe "BambooHRCLI::CLI" do
   describe "output formatting" do
     it "writes error messages to provided IO" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       # This will trigger an error message
       cli.clock_in
@@ -220,7 +232,7 @@ describe "BambooHRCLI::CLI" do
 
     it "writes status messages to provided IO" do
       io = IO::Memory.new
-      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io)
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", io: io)
 
       cli.refresh_status
 
