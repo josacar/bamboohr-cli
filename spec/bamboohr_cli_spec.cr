@@ -218,6 +218,15 @@ describe "BambooHRCLI::CLI" do
     end
   end
 
+  describe "refresh_weekly_time_off" do
+    it "runs without raising an exception" do
+      io = IO::Memory.new
+      cli = BambooHRCLI::CLI.new("testcompany", "test_api_key", "123", 8, io)
+      cli.refresh_weekly_time_off
+      cli.weekly_time_off_hours.should be_a(Float32)
+    end
+  end
+
   describe "output formatting" do
     it "writes error messages to provided IO" do
       io = IO::Memory.new

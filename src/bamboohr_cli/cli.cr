@@ -308,18 +308,35 @@ module BambooHRCLI
       monday_str = monday.to_s("%Y-%m-%d")
       today_str = today.to_s("%Y-%m-%d")
 
-      success, requests = @api.get_time_off_requests(monday_str, today_str)
+      total_hours = 0.0_f32
 
+      success, requests = @api.get_time_off_requests(monday_str, today_str)
       if success && requests
-        total_hours = 0.0_f32
         requests.each do |request|
-          if request.status.status == "approved" && request.amount.unit == "days"
-            days = request.amount.amount.to_f32
-            total_hours += days * @hours_per_day
+          status = request.status.status
+          next unless status == "approved" || status == "requested"
+
+          unit = request.amount.unit
+          request.dates.each do |date_str, value_str|
+            next unless date_str >= monday_str && date_str <= today_str
+            value = value_str.to_f32?
+            next unless value
+
+            case unit
+            when "days"  then total_hours += value * @hours_per_day
+            when "hours" then total_hours += value
+            end
           end
         end
-        @weekly_time_off_hours = total_hours
       end
+
+      _, holiday_dates = @api.get_holidays(monday_str, today_str)
+      holiday_dates.each do |date_str|
+        next unless date_str >= monday_str && date_str <= today_str
+        total_hours += @hours_per_day
+      end
+
+      @weekly_time_off_hours = total_hours
     end
 
     def refresh_daily_total
@@ -445,6 +462,10 @@ module BambooHRCLI
 
     def daily_total_seconds
       @daily_total_seconds
+    end
+
+    def weekly_time_off_hours
+      @weekly_time_off_hours
     end
 
     def api

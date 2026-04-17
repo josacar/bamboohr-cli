@@ -265,6 +265,30 @@ module BambooHRCLI
       end
     end
 
+    def get_holidays(start_date : String, end_date : String) : {Bool, Array(String)}
+      path = "/api/v1/time_off/whos_out?start=#{start_date}&end=#{end_date}"
+      response = make_request("GET", path)
+
+      return {false, [] of String} unless response.success?
+
+      dates = [] of String
+      JSON.parse(response.body).as_a.each do |entry|
+        next unless entry["type"]?.try(&.as_s) == "holiday"
+        start_d = entry["start"]?.try(&.as_s)
+        end_d = entry["end"]?.try(&.as_s)
+        next unless start_d && end_d
+        d = Time.parse(start_d, "%Y-%m-%d", Time::Location::UTC)
+        last = Time.parse(end_d, "%Y-%m-%d", Time::Location::UTC)
+        while d <= last
+          dates << d.to_s("%Y-%m-%d")
+          d = d + 1.day
+        end
+      end
+      {true, dates}
+    rescue
+      {false, [] of String}
+    end
+
     private def make_request(method : String, path : String, body : Hash(String, JSON::Any)? = nil) : HTTP::Client::Response
       headers = HTTP::Headers{
         "Authorization" => @auth_header,
