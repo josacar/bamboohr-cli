@@ -153,16 +153,16 @@ module BambooHRCLI
     end
 
     def get_current_status : {Bool, Time?}
-      today = Time.local.at_beginning_of_day
-      today_str = today.to_s("%Y-%m-%d")
+      now = Time.local
+      start_str = (now - 2.days).at_beginning_of_day.to_s("%Y-%m-%d")
+      end_str   = (now + 1.day).at_beginning_of_day.to_s("%Y-%m-%d")
 
-      success, entries = get_timesheet_entries(today_str, today_str)
+      success, entries = get_timesheet_entries(start_str, end_str)
 
       if success && entries
-        # Find the latest entry for today that has a start time but no end time
-        latest_entry = entries.select { |entry|
-          entry.start && !entry.end
-        }.last?
+        latest_entry = entries
+          .select { |entry| entry.start && !entry.end }
+          .max_by? { |entry| entry.start.not_nil! }
 
         if latest_entry && latest_entry.start
           begin
