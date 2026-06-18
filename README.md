@@ -9,7 +9,7 @@ A modern, interactive command-line interface for BambooHR time tracking, built w
 ## ✨ Features
 
 - 🕐 **Interactive clock in/out functionality**
-- ⏱️ **Real-time display of current session duration** (updates every second when clocked in)
+- ⏱️ **Real-time display of current session duration** (updates every 30 seconds when clocked in)
 - 📊 **Live daily total time tracking** (includes current session + completed sessions)
 - 📅 **Weekly time off tracking** (displays approved time off hours for the current week)
 - 🎨 **Colorized output** for better visibility
@@ -86,7 +86,7 @@ Press ENTER to clock out (Ctrl+C to exit):
 ```
 
 **Real-time updates when clocked in:**
-- Current session time updates every second
+- Current session time updates every 30 seconds
 - Daily total includes current session + previous sessions
 - Weekly total shows all time tracked this week
 - Time off displays approved time off hours for the current week
