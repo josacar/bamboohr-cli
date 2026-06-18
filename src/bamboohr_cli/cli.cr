@@ -56,16 +56,18 @@ module BambooHRCLI
       loop do
         display_status
 
-        # Wait for user input
-        input = gets
-
-        # Skip any input that isn't exactly Enter (empty line)
-        # Ctrl+C is handled separately by the Signal::INT trap
-        # Ctrl+D and other inputs will be ignored
-        if input.nil? || !input.strip.empty?
-          # Either Ctrl+D was pressed or user entered text
-          # Just continue the loop without taking any action
-          next
+        # Inner loop: keep reading keys silently until Enter is pressed.
+        # Raw mode disables ISIG, so Ctrl+C (byte 3) must be caught explicitly.
+        loop do
+          key = STDIN.raw &.read_char
+          if key == '\r' || key == '\n'
+            break
+          elsif key && key.ord == 3
+            cleanup
+            @io.puts "\n👋 Goodbye!".colorize(:yellow)
+            exit 0
+          end
+          # Any other key (including nil/EOF) is silently ignored.
         end
 
         if @current_session_start
