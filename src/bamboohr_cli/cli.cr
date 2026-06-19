@@ -84,8 +84,6 @@ module BambooHRCLI
             start_real_time_updates
           end
         end
-
-        @io.puts
       end
     end
 
@@ -194,17 +192,8 @@ module BambooHRCLI
     end
 
     def force_immediate_refresh
-      # Force an immediate display update after clock-in
-      @io.puts "🔄 Refreshing status...".colorize(:cyan)
-
-      # Update the last refresh time to force immediate refresh in real-time updates
+      # Prime the cache timer so the real-time fiber renders immediately on its first tick.
       @last_daily_refresh = Time.local - 31.seconds
-
-      # Display current status immediately
-      if @current_session_start
-        display_status_inline
-        @io.puts # Add newline after inline display
-      end
     end
 
     def refresh_status
@@ -370,13 +359,9 @@ module BambooHRCLI
 
       if channel = @update_channel
         spawn do
-          # Force immediate first update when starting real-time updates
+          # Draw the first status line immediately when starting real-time updates.
           if @current_session_start
-            @io.puts "🔄 Starting real-time updates...".colorize(:cyan)
             display_status_inline
-            @io.puts # Add newline after inline display
-
-            # Force refresh daily total on first update
             refresh_daily_total_with_cache
             @last_daily_refresh = Time.local
           end
