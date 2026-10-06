@@ -82,9 +82,9 @@ describe "BambooHR API Models" do
       json.should contain("Test note")
     end
 
-  describe "TimeOffRequest" do
-    it "can be deserialized from JSON" do
-      json = %({
+    describe "TimeOffRequest" do
+      it "can be deserialized from JSON" do
+        json = %({
         "id": "114040",
         "start": "2026-02-16",
         "end": "2026-02-16",
@@ -105,18 +105,18 @@ describe "BambooHR API Models" do
         }
       })
 
-      request = BambooHRCLI::TimeOffRequest.from_json(json)
-      request.id.should eq("114040")
-      request.start.should eq("2026-02-16")
-      request.end.should eq("2026-02-16")
-      request.amount.unit.should eq("days")
-      request.amount.amount.should eq("0.5")
-      request.type.name.should eq("FlyBetter Days")
-      request.status.status.should eq("approved")
-    end
+        request = BambooHRCLI::TimeOffRequest.from_json(json)
+        request.id.should eq("114040")
+        request.start.should eq("2026-02-16")
+        request.end.should eq("2026-02-16")
+        request.amount.unit.should eq("days")
+        request.amount.amount.should eq("0.5")
+        request.type.name.should eq("FlyBetter Days")
+        request.status.status.should eq("approved")
+      end
 
-    it "can deserialize a collection from JSON" do
-      json = %([{
+      it "can deserialize a collection from JSON" do
+        json = %([{
         "id": "114040",
         "start": "2026-02-16",
         "end": "2026-02-16",
@@ -126,13 +126,13 @@ describe "BambooHR API Models" do
         "dates": {"2026-02-16": "0.5"}
       }])
 
-      requests = BambooHRCLI::TimeOffRequestCollection.from_json(json)
-      requests.size.should eq(1)
-      requests[0].id.should eq("114040")
-    end
+        requests = BambooHRCLI::TimeOffRequestCollection.from_json(json)
+        requests.size.should eq(1)
+        requests[0].id.should eq("114040")
+      end
 
-    it "exposes dates hash with per-day amounts" do
-      json = %({
+      it "exposes dates hash with per-day amounts" do
+        json = %({
         "id": "200",
         "start": "2026-04-14",
         "end": "2026-04-16",
@@ -142,15 +142,15 @@ describe "BambooHR API Models" do
         "dates": {"2026-04-14": "1", "2026-04-15": "1", "2026-04-16": "1"}
       })
 
-      request = BambooHRCLI::TimeOffRequest.from_json(json)
-      request.dates.size.should eq(3)
-      request.dates["2026-04-14"].should eq("1")
-      request.dates["2026-04-15"].should eq("1")
-      request.dates["2026-04-16"].should eq("1")
-    end
+        request = BambooHRCLI::TimeOffRequest.from_json(json)
+        request.dates.size.should eq(3)
+        request.dates["2026-04-14"].should eq("1")
+        request.dates["2026-04-15"].should eq("1")
+        request.dates["2026-04-16"].should eq("1")
+      end
 
-    it "can have hours as unit" do
-      json = %({
+      it "can have hours as unit" do
+        json = %({
         "id": "201",
         "start": "2026-04-14",
         "end": "2026-04-14",
@@ -160,71 +160,70 @@ describe "BambooHR API Models" do
         "dates": {"2026-04-14": "4"}
       })
 
-      request = BambooHRCLI::TimeOffRequest.from_json(json)
-      request.amount.unit.should eq("hours")
-      request.dates["2026-04-14"].should eq("4")
+        request = BambooHRCLI::TimeOffRequest.from_json(json)
+        request.amount.unit.should eq("hours")
+        request.dates["2026-04-14"].should eq("4")
+      end
+
+      describe "weekly time off summing logic" do
+        it "counts Monday day-unit approved request" do
+          requests = [make_time_off_request("1", "days", "approved", {"2026-04-13" => "1"})]
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(8.0_f32)
+        end
+
+        it "counts Monday hour-unit approved request" do
+          requests = [make_time_off_request("1", "hours", "approved", {"2026-04-13" => "4"})]
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(4.0_f32)
+        end
+
+        it "counts pending (requested) time off" do
+          requests = [make_time_off_request("1", "days", "requested", {"2026-04-14" => "1"})]
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(8.0_f32)
+        end
+
+        it "excludes denied requests" do
+          requests = [make_time_off_request("1", "days", "denied", {"2026-04-14" => "1"})]
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(0.0_f32)
+        end
+
+        it "excludes dates outside the monday-today window" do
+          requests = [make_time_off_request("1", "days", "approved", {"2026-04-12" => "1", "2026-04-13" => "1"})]
+          # Only 2026-04-13 (Monday) is inside window; 2026-04-12 (Sunday) is excluded
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(8.0_f32)
+        end
+
+        it "only counts dates up to today in multi-day request spanning into future" do
+          requests = [make_time_off_request("1", "days", "approved", {
+            "2026-04-14" => "1", "2026-04-15" => "1", "2026-04-16" => "1", "2026-04-17" => "1", "2026-04-18" => "1",
+          })]
+          # today_str = "2026-04-16" so only Mon-Wed count (3 days)
+          sum_time_off(requests, "2026-04-13", "2026-04-16").should eq(24.0_f32)
+        end
+
+        it "counts partial days (0.5 days)" do
+          requests = [make_time_off_request("1", "days", "approved", {"2026-04-14" => "0.5"})]
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(4.0_f32)
+        end
+
+        it "respects custom hours_per_day" do
+          requests = [make_time_off_request("1", "days", "approved", {"2026-04-14" => "1"})]
+          sum_time_off(requests, "2026-04-13", "2026-04-17", hours_per_day: 7).should eq(7.0_f32)
+        end
+
+        it "sums multiple requests in the same week" do
+          requests = [
+            make_time_off_request("1", "days", "approved", {"2026-04-14" => "1"}),
+            make_time_off_request("2", "hours", "approved", {"2026-04-15" => "4"}),
+          ]
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(12.0_f32)
+        end
+
+        it "returns zero when no requests in window" do
+          requests = [] of BambooHRCLI::TimeOffRequest
+          sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(0.0_f32)
+        end
+      end
     end
-
-    describe "weekly time off summing logic" do
-      it "counts Monday day-unit approved request" do
-        requests = [make_time_off_request("1", "days", "approved", {"2026-04-13" => "1"})]
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(8.0_f32)
-      end
-
-      it "counts Monday hour-unit approved request" do
-        requests = [make_time_off_request("1", "hours", "approved", {"2026-04-13" => "4"})]
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(4.0_f32)
-      end
-
-      it "counts pending (requested) time off" do
-        requests = [make_time_off_request("1", "days", "requested", {"2026-04-14" => "1"})]
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(8.0_f32)
-      end
-
-      it "excludes denied requests" do
-        requests = [make_time_off_request("1", "days", "denied", {"2026-04-14" => "1"})]
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(0.0_f32)
-      end
-
-      it "excludes dates outside the monday-today window" do
-        requests = [make_time_off_request("1", "days", "approved", {"2026-04-12" => "1", "2026-04-13" => "1"})]
-        # Only 2026-04-13 (Monday) is inside window; 2026-04-12 (Sunday) is excluded
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(8.0_f32)
-      end
-
-      it "only counts dates up to today in multi-day request spanning into future" do
-        requests = [make_time_off_request("1", "days", "approved", {
-          "2026-04-14" => "1", "2026-04-15" => "1", "2026-04-16" => "1", "2026-04-17" => "1", "2026-04-18" => "1",
-        })]
-        # today_str = "2026-04-16" so only Mon-Wed count (3 days)
-        sum_time_off(requests, "2026-04-13", "2026-04-16").should eq(24.0_f32)
-      end
-
-      it "counts partial days (0.5 days)" do
-        requests = [make_time_off_request("1", "days", "approved", {"2026-04-14" => "0.5"})]
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(4.0_f32)
-      end
-
-      it "respects custom hours_per_day" do
-        requests = [make_time_off_request("1", "days", "approved", {"2026-04-14" => "1"})]
-        sum_time_off(requests, "2026-04-13", "2026-04-17", hours_per_day: 7).should eq(7.0_f32)
-      end
-
-      it "sums multiple requests in the same week" do
-        requests = [
-          make_time_off_request("1", "days", "approved", {"2026-04-14" => "1"}),
-          make_time_off_request("2", "hours", "approved", {"2026-04-15" => "4"}),
-        ]
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(12.0_f32)
-      end
-
-      it "returns zero when no requests in window" do
-        requests = [] of BambooHRCLI::TimeOffRequest
-        sum_time_off(requests, "2026-04-13", "2026-04-17").should eq(0.0_f32)
-      end
-    end
-  end
-
 
     it "can be deserialized from JSON" do
       json_str = {
@@ -404,7 +403,7 @@ describe "API" do
 
     it "get_timesheet_entries returns success boolean and optional collection" do
       api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
-      
+
       success, entries = api.get_timesheet_entries("2024-01-01", "2024-01-31")
       success.should be_a(Bool)
       entries.should be_a(BambooHRCLI::EmployeeTimesheetEntryCollection?)
@@ -412,7 +411,7 @@ describe "API" do
 
     it "get_time_off_requests returns success boolean and optional collection" do
       api = BambooHRCLI::API.new("testcompany", "test_api_key", "123")
-      
+
       success, requests = api.get_time_off_requests("2026-02-16", "2026-02-19")
       success.should be_a(Bool)
       requests.should be_a(BambooHRCLI::TimeOffRequestCollection?)

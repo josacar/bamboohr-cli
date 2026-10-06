@@ -155,7 +155,7 @@ module BambooHRCLI
     def get_current_status : {Bool, Time?}
       now = Time.local
       start_str = (now - 2.days).at_beginning_of_day.to_s("%Y-%m-%d")
-      end_str   = (now + 1.day).at_beginning_of_day.to_s("%Y-%m-%d")
+      end_str = (now + 1.day).at_beginning_of_day.to_s("%Y-%m-%d")
 
       success, entries = get_timesheet_entries(start_str, end_str)
 
