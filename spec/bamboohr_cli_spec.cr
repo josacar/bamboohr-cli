@@ -252,3 +252,19 @@ describe "BambooHRCLI::CLI" do
     end
   end
 end
+
+describe "CLIParser --export" do
+  it "accepts a valid month" do
+    CLIParser.parse(["--export=2026-10"]).should eq :export
+    CLIParser.export_month.should eq "2026-10"
+  end
+
+  it "defaults to the current month" do
+    CLIParser.parse(["--export"]).should eq :export
+    CLIParser.export_month.should eq Time.local.to_s("%Y-%m")
+  end
+
+  it "rejects an invalid month" do
+    CLIParser.parse(["--export=2026-13"]).should eq :unknown
+  end
+end

@@ -1,14 +1,20 @@
 require "./bamboohr_cli/version"
 require "./bamboohr_cli/config"
 require "./bamboohr_cli/api"
+require "./bamboohr_cli/csv_log"
 require "./bamboohr_cli/cli"
 require "colorize"
 require "option_parser"
 
 # CLI argument parsing
 class CLIParser
+  MONTH_FORMAT = /\A\d{4}-(0[1-9]|1[0-2])\z/
+
+  class_property export_month : String = Time.local.to_s("%Y-%m")
+
   def self.parse(args : Array(String))
     action = :interactive
+    @@export_month = Time.local.to_s("%Y-%m")
 
     parser = OptionParser.new do |parser|
       parser.banner = "Usage: bamboohr-cli [subcommand]"
@@ -17,6 +23,16 @@ class CLIParser
       end
       parser.on("--config-remove", "Removes config file") do
         action = :config_remove
+      end
+      parser.on("--export [MONTH]", "Export a month (YYYY-MM, default: current) from BambooHR to CSV") do |month|
+        if month.empty?
+          action = :export
+        elsif MONTH_FORMAT.matches?(month)
+          @@export_month = month
+          action = :export
+        else
+          action = :unknown
+        end
       end
       parser.on("-v", "--version", "Show version") do
         action = :version
@@ -43,6 +59,10 @@ class CLIParser
     io.puts "  bamboohr-cli --version, -v   Show version information"
     io.puts "  bamboohr-cli --config        Show configuration file information"
     io.puts "  bamboohr-cli --config-remove Remove saved configuration file"
+    io.puts "  bamboohr-cli --export [YYYY-MM]  Export a month of entries to CSV"
+    io.puts ""
+    io.puts "CSV logs:"
+    io.puts "  Each clock-out is appended to one CSV per month in #{BambooHRCLI::CsvLog.data_dir}"
     io.puts ""
     io.puts "Configuration:"
     io.puts "  The app follows XDG Base Directory Specification for config files."
@@ -126,6 +146,10 @@ unless PROGRAM_NAME.includes?("crystal-run-spec")
 
     # Create and run CLI
     cli = BambooHRCLI::CLI.new(config.company_domain, config.api_key, config.employee_id, config.hours_per_day)
+
+    if action == :export
+      exit(cli.export_month(CLIParser.export_month) ? 0 : 1)
+    end
 
     # Handle Ctrl+C gracefully
     Signal::INT.trap do

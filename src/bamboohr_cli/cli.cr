@@ -1,6 +1,7 @@
 require "colorize"
 require "time"
 require "./api"
+require "./csv_log"
 
 module BambooHRCLI
   class CLI
@@ -21,7 +22,7 @@ module BambooHRCLI
     @cache_date : String?
     @last_status_check : Time?
 
-    def initialize(@company_domain : String, @api_key : String, @employee_id : String, @hours_per_day : Int32 = 8, @io : IO = STDOUT)
+    def initialize(@company_domain : String, @api_key : String, @employee_id : String, @hours_per_day : Int32 = 8, @io : IO = STDOUT, @csv_dir : String = CsvLog.data_dir)
       @api = API.new(@company_domain, @api_key, @employee_id)
       @current_session_start = nil
       @daily_total_seconds = 0
@@ -143,6 +144,10 @@ module BambooHRCLI
           @io.puts "✅ Successfully clocked out at #{format_time(Time.local)}".colorize(:green)
         end
 
+        if start_time = @current_session_start
+          log_session(entry, start_time, Time.local)
+        end
+
         # Only clear session and stop updates on successful clock out
         @current_session_start = nil
         @cached_session_start = nil
@@ -161,6 +166,38 @@ module BambooHRCLI
         # Don't clear session or stop updates on failure
         false
       end
+    end
+
+    # Rebuilds the CSV for a month (YYYY-MM) from BambooHR timesheet entries.
+    def export_month(month : String) : Bool
+      first_day = Time.parse(month + "-01", "%Y-%m-%d", Time::Location.local)
+      last_day = first_day.at_end_of_month
+
+      success, entries = @api.get_timesheet_entries(first_day.to_s("%Y-%m-%d"), last_day.to_s("%Y-%m-%d"))
+      unless success && entries
+        handle_api_error("export")
+        return false
+      end
+
+      rows = [] of CsvLog::Row
+      entries.each do |entry|
+        start_str = entry.start
+        end_str = entry.end
+        next unless start_str && end_str
+
+        begin
+          rows << CsvLog::Row.new(entry.id, Time.parse_iso8601(start_str), Time.parse_iso8601(end_str), entry.note)
+        rescue Time::Format::Error
+          # Skip entries with invalid time formats
+        end
+      end
+
+      path = CsvLog.write_month(month, rows, @csv_dir)
+      @io.puts "✅ Exported #{rows.size} entries to #{path}".colorize(:green)
+      true
+    rescue ex : File::Error
+      @io.puts "❌ Could not write CSV: #{ex.message}".colorize(:red)
+      false
     end
 
     def force_refresh_status
@@ -492,6 +529,13 @@ module BambooHRCLI
     private def is_cache_valid_for_today? : Bool
       today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
       @cache_date == today_str
+    end
+
+    private def log_session(entry : TimesheetEntry?, start_time : Time, end_time : Time)
+      row = CsvLog::Row.new(entry.try(&.id), start_time, end_time, entry.try(&.note))
+      CsvLog.append(row, @csv_dir)
+    rescue ex : File::Error
+      @io.puts "⚠️  Could not write CSV log: #{ex.message}".colorize(:yellow)
     end
 
     private def handle_api_error(action : String)

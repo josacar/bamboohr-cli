@@ -44,7 +44,7 @@ sudo make install  # Optional: install to system PATH
 dependencies:
   bamboohr-cli:
     github: josacar/bamboohr-cli
-    version: ~> 1.0.3
+    version: ~> 1.1.0
 ```
 
 ### First Run
@@ -99,7 +99,15 @@ bamboohr-cli --help          # Show help information
 bamboohr-cli --version       # Show version information
 bamboohr-cli --config        # Show configuration file information
 bamboohr-cli --config-remove # Remove saved configuration file
+bamboohr-cli --export [YYYY-MM] # Rebuild a month's CSV from BambooHR (default: current month)
 ```
+
+### CSV Logs
+
+Each clock-out appends a row to a per-month CSV (`YYYY-MM.csv`) in
+`$XDG_DATA_HOME/bamboohr-cli/` (default `~/.local/share/bamboohr-cli/`), with columns
+`entry_id,date,start,end,duration_hours,note`. Files are created with `0600` permissions.
+Use `--export` to backfill a month from BambooHR, including entries logged outside the CLI.
 
 ## ⚙️ Configuration
 
