@@ -148,7 +148,19 @@ unless PROGRAM_NAME.includes?("crystal-run-spec")
     cli = BambooHRCLI::CLI.new(config.company_domain, config.api_key, config.employee_id, config.hours_per_day)
 
     if action == :export
-      exit(cli.export_month(CLIParser.export_month) ? 0 : 1)
+      month = CLIParser.export_month
+      path = BambooHRCLI::CsvLog.path_for(month)
+      overwrite = false
+      if File.exists?(path)
+        print "#{path} already exists. Overwrite? [y/N]: "
+        response = gets.try(&.strip.downcase) || "n"
+        overwrite = response == "y" || response == "yes"
+        unless overwrite
+          puts "Export cancelled."
+          exit 0
+        end
+      end
+      exit(cli.export_month(month, overwrite) ? 0 : 1)
     end
 
     # Handle Ctrl+C gracefully

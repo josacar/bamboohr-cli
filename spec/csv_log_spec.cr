@@ -53,3 +53,19 @@ describe BambooHRCLI::CsvLog do
     File.exists?("#{path}.tmp").should be_false
   end
 end
+
+describe "CLI#export_month" do
+  it "does not overwrite an existing file unless told to" do
+    dir = File.join(Dir.tempdir, "bamboohr-cli-export-#{Random.new.hex(4)}")
+    Dir.mkdir_p(dir)
+    path = File.join(dir, "2026-10.csv")
+    File.write(path, "keep")
+    io = IO::Memory.new
+    cli = BambooHRCLI::CLI.new("acme", "key", "1", 8, io, dir)
+
+    cli.export_month("2026-10").should be_false
+    File.read(path).should eq "keep"
+    io.to_s.should contain "already exists"
+    FileUtils.rm_rf(dir)
+  end
+end

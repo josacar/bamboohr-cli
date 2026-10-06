@@ -169,7 +169,14 @@ module BambooHRCLI
     end
 
     # Rebuilds the CSV for a month (YYYY-MM) from BambooHR timesheet entries.
-    def export_month(month : String) : Bool
+    # Refuses to replace an existing CSV unless overwrite is true.
+    def export_month(month : String, overwrite : Bool = false) : Bool
+      path = CsvLog.path_for(month, @csv_dir)
+      if File.exists?(path) && !overwrite
+        @io.puts "❌ #{path} already exists; not overwritten".colorize(:red)
+        return false
+      end
+
       first_day = Time.parse(month + "-01", "%Y-%m-%d", Time::Location.local)
       last_day = first_day.at_end_of_month
 
@@ -192,7 +199,7 @@ module BambooHRCLI
         end
       end
 
-      path = CsvLog.write_month(month, rows, @csv_dir)
+      CsvLog.write_month(month, rows, @csv_dir)
       @io.puts "✅ Exported #{rows.size} entries to #{path}".colorize(:green)
       true
     rescue ex : File::Error
