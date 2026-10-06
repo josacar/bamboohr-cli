@@ -68,6 +68,23 @@ Three collaborating units under `src/bamboohr_cli/`:
   for `ConfigManager`, and assert on returned `{Bool, T?}` tuples / captured IO output.
 - Shared fixtures and `create_mock_response` live in `spec/spec_helper.cr`.
 
+## Guardrails
+
+- **Never hit the real BambooHR API from automated runs.** Clock in/out creates real,
+  undeletable timesheet entries. Tests must stay on WebMock (`allow_net_connect = false`);
+  leave interactive clock in/out testing to the user.
+- **Never print, log, commit, or copy secrets** (API key, config file contents, `.env`).
+  Use placeholders like `$BAMBOOHR_API_KEY` in docs, specs, and examples. Never write the API
+  key or company domain into CSV logs.
+- **Don't touch user data files** (`~/.config/bamboohr-cli/`, `~/.local/share/bamboohr-cli/*.csv`)
+  without being asked. Specs must use temp dirs (see `spec/csv_log_spec.cr`), never the real
+  XDG paths.
+- **Keep file permissions tight:** config and CSV files are `0o600`, their dirs `0o700`.
+  Cells written to CSV go through `CsvLog.sanitize` to block spreadsheet formula injection.
+- **Don't overwrite existing files silently.** `--export` must confirm before replacing a
+  month's CSV; keep `CLI#export_month` refusing by default.
+- **Run before committing:** `crystal tool format --check` and `crystal spec` must both pass.
+
 ## Conventions
 
 - Commit messages follow **Conventional Commits** (`feat:`, `fix:`, etc.); versioning is
