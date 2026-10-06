@@ -66,8 +66,9 @@ module BambooHRCLI
     end
 
     private def self.cells(row : Row) : Array(String)
-      start = row.start.to_local
-      finish = row.finish.to_local
+      # BambooHR stores times to the minute (truncated), so match it here.
+      start = row.start.to_local.at_beginning_of_minute
+      finish = row.finish.to_local.at_beginning_of_minute
       hours = (finish - start).total_hours
 
       [

@@ -1,5 +1,6 @@
 require "./spec_helper"
 require "../src/bamboohr_cli/csv_log"
+require "../src/bamboohr_cli/cli"
 require "file_utils"
 
 describe BambooHRCLI::CsvLog do
@@ -66,6 +67,16 @@ describe "CLI#export_month" do
     cli.export_month("2026-10").should be_false
     File.read(path).should eq "keep"
     io.to_s.should contain "already exists"
+    FileUtils.rm_rf(dir)
+  end
+end
+
+describe "CsvLog minute precision" do
+  it "truncates seconds to match BambooHR" do
+    dir = File.join(Dir.tempdir, "bamboohr-cli-min-#{Random.new.hex(4)}")
+    start = Time.local(2026, 10, 6, 16, 41, 23)
+    path = BambooHRCLI::CsvLog.append(BambooHRCLI::CsvLog::Row.new(9, start, start + 46.minutes + 26.seconds, nil), dir)
+    File.read_lines(path)[1].should match(/:41:00.*:27:00.*,0\.77,/)
     FileUtils.rm_rf(dir)
   end
 end
