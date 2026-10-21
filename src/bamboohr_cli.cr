@@ -11,10 +11,12 @@ class CLIParser
   MONTH_FORMAT = /\A\d{4}-(0[1-9]|1[0-2])\z/
 
   class_property export_month : String = Time.local.to_s("%Y-%m")
+  class_property? offline : Bool = false
 
   def self.parse(args : Array(String))
     action = :interactive
     @@export_month = Time.local.to_s("%Y-%m")
+    @@offline = false
 
     parser = OptionParser.new do |parser|
       parser.banner = "Usage: bamboohr-cli [subcommand]"
@@ -33,6 +35,9 @@ class CLIParser
         else
           action = :unknown
         end
+      end
+      parser.on("--offline", "Do not contact BambooHR; write entries to CSV only") do
+        @@offline = true
       end
       parser.on("-v", "--version", "Show version") do
         action = :version
@@ -59,6 +64,7 @@ class CLIParser
     io.puts "  bamboohr-cli --version, -v       Show version information"
     io.puts "  bamboohr-cli --config            Show configuration file information"
     io.puts "  bamboohr-cli --config-remove     Remove saved configuration file"
+    io.puts "  bamboohr-cli --offline           Track time locally and write entries to CSV only (no BambooHR calls)"
     io.puts "  bamboohr-cli --export [YYYY-MM]  Rebuild a month's CSV from BambooHR (default: current month)"
     io.puts ""
     io.puts "CSV logs:"
@@ -135,6 +141,17 @@ unless PROGRAM_NAME.includes?("crystal-run-spec")
       exit 1
     when :interactive
       # Continue with interactive mode
+    end
+
+    if CLIParser.offline? && action == :interactive
+      cli = BambooHRCLI::CLI.new("(offline)", "", "(offline)", offline: true)
+      Signal::INT.trap do
+        cli.cleanup
+        puts "\n👋 Goodbye!".colorize(:yellow)
+        exit 0
+      end
+      cli.run_interactive
+      exit 0
     end
 
     # Get configuration using XDG-compliant manager

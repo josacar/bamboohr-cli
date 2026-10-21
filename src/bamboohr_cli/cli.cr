@@ -22,7 +22,7 @@ module BambooHRCLI
     @cache_date : String?
     @last_status_check : Time?
 
-    def initialize(@company_domain : String, @api_key : String, @employee_id : String, @hours_per_day : Int32 = 8, @io : IO = STDOUT, @csv_dir : String = CsvLog.data_dir)
+    def initialize(@company_domain : String, @api_key : String, @employee_id : String, @hours_per_day : Int32 = 8, @io : IO = STDOUT, @csv_dir : String = CsvLog.data_dir, @offline : Bool = false)
       @api = API.new(@company_domain, @api_key, @employee_id)
       @current_session_start = nil
       @daily_total_seconds = 0
@@ -43,11 +43,14 @@ module BambooHRCLI
       @io.puts "🎯 BambooHR Time Tracker".colorize(:magenta).bold
       @io.puts "Company: #{@company_domain}".colorize(:light_gray)
       @io.puts "Employee ID: #{@employee_id}".colorize(:light_gray)
+      @io.puts "Offline mode: entries are written to CSV only, BambooHR is not contacted".colorize(:yellow) if @offline
       @io.puts "─" * 50
 
       # Force immediate refresh on startup (bypass cache)
-      @io.puts "🔄 Fetching current status...".colorize(:cyan)
-      force_refresh_status
+      unless @offline
+        @io.puts "🔄 Fetching current status...".colorize(:cyan)
+        force_refresh_status
+      end
 
       # Start real-time updates if already clocked in
       if @current_session_start
@@ -91,7 +94,7 @@ module BambooHRCLI
     def clock_in(note : String? = nil, project_id : Int32? = nil, task_id : Int32? = nil) : Bool
       @io.puts "🕐 Clocking in...".colorize(:yellow)
 
-      success, entry = @api.clock_in(note, project_id, task_id)
+      success, entry = @offline ? {true, nil} : @api.clock_in(note, project_id, task_id)
 
       if success
         current_time = Time.local
@@ -110,7 +113,9 @@ module BambooHRCLI
         end
 
         # Use cached daily sessions if available, otherwise fetch fresh data
-        if @cache_date == today_str && @cached_daily_sessions >= 0
+        if @offline
+          # Totals are tracked locally; nothing to fetch
+        elsif @cache_date == today_str && @cached_daily_sessions >= 0
           @io.puts "📋 Using cached daily sessions data".colorize(:cyan)
           @daily_total_seconds = @cached_daily_sessions
           @weekly_total_seconds = @cached_weekly_sessions
@@ -129,7 +134,7 @@ module BambooHRCLI
     def clock_out : Bool
       @io.puts "🕐 Clocking out...".colorize(:yellow)
 
-      success, entry = @api.clock_out
+      success, entry = @offline ? {true, nil} : @api.clock_out
 
       if success
         if start_time = @current_session_start
@@ -148,10 +153,24 @@ module BambooHRCLI
           log_session(entry, start_time, Time.local)
         end
 
+        if @offline
+          if start_time = @current_session_start
+            elapsed = (Time.local - start_time).total_seconds.to_i
+            @daily_total_seconds += elapsed
+            @weekly_total_seconds += elapsed
+            @cached_daily_sessions = @daily_total_seconds
+          end
+        end
+
         # Only clear session and stop updates on successful clock out
         @current_session_start = nil
         @cached_session_start = nil
         stop_real_time_updates
+
+        if @offline
+          @io.puts "📊 Daily total (this run): #{format_duration(@daily_total_seconds)}".colorize(:blue)
+          return true
+        end
 
         # Force fresh daily total refresh to include the completed session
         @io.puts "🔄 Updating daily total...".colorize(:cyan)
@@ -279,6 +298,7 @@ module BambooHRCLI
     end
 
     def force_refresh_daily_total
+      return if @offline
       # Force fresh daily total from API, bypassing cache
       today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
       success, total_seconds = @api.get_daily_total(today_str)
@@ -303,6 +323,7 @@ module BambooHRCLI
     end
 
     def refresh_daily_total_with_cache
+      return if @offline
       today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
       success, total_seconds = @api.get_daily_total(today_str)
 
@@ -375,6 +396,7 @@ module BambooHRCLI
     end
 
     def refresh_daily_total
+      return if @offline
       today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
 
       # Use cached data if available and cache is for today
