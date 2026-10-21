@@ -47,7 +47,14 @@ module BambooHRCLI
       @io.puts "─" * 50
 
       # Force immediate refresh on startup (bypass cache)
-      unless @offline
+      if @offline
+        # No API to ask: the CSV records whether we were left clocked in
+        if start = CsvLog.open_session(@csv_dir)
+          @current_session_start = start
+          @cached_session_start = start
+          @io.puts "↩️  Resumed open session started at #{format_time(start)}".colorize(:cyan)
+        end
+      else
         @io.puts "🔄 Fetching current status...".colorize(:cyan)
         force_refresh_status
       end
@@ -105,6 +112,7 @@ module BambooHRCLI
         @cached_session_start = current_time
         @cache_date = today_str
         @last_status_check = current_time
+        log_open_session(entry, current_time, note)
 
         if entry
           @io.puts "✅ Successfully clocked in at #{format_time(current_time)} (Entry ID: #{entry.id})".colorize(:green)
@@ -558,6 +566,12 @@ module BambooHRCLI
     private def is_cache_valid_for_today? : Bool
       today_str = Time.local.at_beginning_of_day.to_s("%Y-%m-%d")
       @cache_date == today_str
+    end
+
+    private def log_open_session(entry : TimesheetEntry?, start_time : Time, note : String?)
+      CsvLog.start_session(start_time, entry.try(&.id), entry.try(&.note) || note, @csv_dir)
+    rescue ex : File::Error
+      @io.puts "⚠️  Could not write CSV log: #{ex.message}".colorize(:yellow)
     end
 
     private def log_session(entry : TimesheetEntry?, start_time : Time, end_time : Time)

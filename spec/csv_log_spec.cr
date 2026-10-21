@@ -20,6 +20,18 @@ describe BambooHRCLI::CsvLog do
     lines[1].should contain "2.00"
   end
 
+  it "records an open session and replaces it on clock-out" do
+    start = Time.local.at_beginning_of_minute - 1.hour
+    path = BambooHRCLI::CsvLog.start_session(start, nil, nil, dir)
+
+    BambooHRCLI::CsvLog.open_session(dir).should eq start
+    File.read_lines(path).size.should eq 2
+
+    BambooHRCLI::CsvLog.append(BambooHRCLI::CsvLog::Row.new(nil, start, start + 1.hour, nil), dir)
+    BambooHRCLI::CsvLog.open_session(dir).should be_nil
+    File.read_lines(path).size.should eq 2
+  end
+
   it "skips rows whose entry_id already exists" do
     start = Time.local(2026, 10, 6, 9, 0, 0)
     row = BambooHRCLI::CsvLog::Row.new(7, start, start + 1.hour, nil)

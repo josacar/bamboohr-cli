@@ -27,6 +27,7 @@ module BambooHRCLI
     def self.append(row : Row, dir : String = data_dir) : String
       ensure_dir(dir)
       path = path_for(row.start, dir)
+      drop_open_rows(path)
       new_file = !File.exists?(path)
 
       if !new_file && (id = row.entry_id) && has_entry?(path, id)
@@ -41,6 +42,79 @@ module BambooHRCLI
       end
       File.chmod(path, 0o600) if new_file
       path
+    end
+
+    # Records a clock-in that has no clock-out yet: a row with empty end and
+    # duration. It lets a later run know the user is still clocked in; the row
+    # is replaced by the completed session on clock-out (see `append`).
+    def self.start_session(start : Time, entry_id : Int32?, note : String?, dir : String = data_dir) : String
+      ensure_dir(dir)
+      path = path_for(start, dir)
+      drop_open_rows(path)
+      new_file = !File.exists?(path)
+
+      File.open(path, "a", perm: File::Permissions.new(0o600)) do |file|
+        CSV.build(file) do |csv|
+          csv.row HEADER if new_file
+          csv.row [
+            entry_id.to_s,
+            start.to_local.at_beginning_of_minute.to_s("%Y-%m-%d"),
+            start.to_local.at_beginning_of_minute.to_rfc3339,
+            "",
+            "",
+            sanitize(note || ""),
+          ]
+        end
+      end
+      File.chmod(path, 0o600) if new_file
+      path
+    end
+
+    # Start time of the session that was clocked in but never clocked out, if
+    # any. Looks at the current and previous month (a session can span midnight
+    # on the last day of a month).
+    def self.open_session(dir : String = data_dir) : Time?
+      now = Time.local
+      [now, now.at_beginning_of_month - 1.day].each do |time|
+        path = path_for(time, dir)
+        next unless File.exists?(path)
+        File.open(path) do |file|
+          CSV.each_row(file) do |cols|
+            next if cols[0]? == HEADER[0]
+            if cols[3]?.try(&.empty?) && (start = cols[2]?) && !start.empty?
+              return Time.parse_rfc3339(start)
+            end
+          end
+        end
+      end
+      nil
+    rescue Time::Format::Error | File::Error | CSV::Error
+      nil
+    end
+
+    # Removes rows without a clock-out time from the file (no-op if none).
+    private def self.drop_open_rows(path : String)
+      return unless File.exists?(path)
+
+      kept = [] of Array(String)
+      dropped = false
+      File.open(path) do |file|
+        CSV.each_row(file) do |cols|
+          if cols[3]?.try(&.empty?) && cols[0]? != HEADER[0]
+            dropped = true
+          else
+            kept << cols
+          end
+        end
+      end
+      return unless dropped
+
+      tmp = "#{path}.tmp"
+      File.open(tmp, "w", perm: File::Permissions.new(0o600)) do |file|
+        CSV.build(file) { |csv| kept.each { |cols| csv.row cols } }
+      end
+      File.chmod(tmp, 0o600)
+      File.rename(tmp, path)
     end
 
     # Atomically replaces the CSV for the given month (YYYY-MM) with the rows.
